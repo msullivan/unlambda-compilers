@@ -66,11 +66,10 @@ struct
         val cnt = ref 0
     in
     fun reset () = cnt := 0
-    fun putc c = 
-        if c = #"\n" then 
-            (print ((Int.toString (!cnt)) ^ "\n"); cnt := 0)
-        else
-            cnt := (!cnt + 1)
+    fun putc #"\n" = (print ((Int.toString (!cnt)) ^ "\n"); cnt := 0)
+      | putc #"-" = cnt := (!cnt - 1)
+      | putc _ = cnt := (!cnt + 1)
+    fun check () = (print ((Int.toString (!cnt)) ^ "\n"))
     end
 
     fun eval (EApp (e1, e2)) = 

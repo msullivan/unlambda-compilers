@@ -87,7 +87,8 @@ struct
                   | elim' x (ELambda (x', e')) =
                     elim x (elim x' e')
             in
-                if depends x e then elim' x e else kapp e
+                (*if depends x e then elim' x e else kapp e*)
+                elim' x e
             end
 
         val fconv = 
@@ -97,7 +98,7 @@ struct
     fun convert (EApp (e1, e2)) = (U.EApp (convert e1, convert e2))
       | convert (ELambda (x, e)) = convert (elim x e)
       | convert (EFunc f) = (U.EFunc (fconv f))
-      | convert (EVar _) = raise Fail "variable!"
+      | convert (EVar s) = raise Fail ("variable: " ^ s)
     end
 
     fun foobar s = (convert o parse o lex o explode) s

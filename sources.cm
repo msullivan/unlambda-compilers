@@ -3,3 +3,4 @@ Group is
       $/basis.cm
       unlambda.sml
       unlambdaify.sml
+      test.sml
