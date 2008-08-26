@@ -8,7 +8,7 @@ struct
     val ``` = "```"
 
     val N0 = "^s^z$z"
-    val S = "^w^y^x`$y``$w$x$y"
+    val S = "^w^y^x`$y``$w$y$x"
     val N1 = "`" ^ S ^ N0
     val N2 = "`" ^ S ^ N1
     val N3 = "`" ^ S ^ N2

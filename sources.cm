@@ -2,5 +2,6 @@ Group is
       $/smlnj-lib.cm
       $/basis.cm
       unlambda.sml
+      lambda.sml
       unlambdaify.sml
       test.sml

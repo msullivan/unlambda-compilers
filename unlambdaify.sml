@@ -81,7 +81,7 @@ struct
             let
                 fun elim' x (EFunc f) = kapp (EFunc f)
                   | elim' x (EVar x') =
-                    if x = x' then (EFunc VI) else (EVar x')
+                    if x = x' then (EFunc VI) else kapp (EVar x')
                   | elim' x (EApp (e1, e2)) =
                     sapp (elim x e1, elim x e2)
                   | elim' x (ELambda (x', e')) =
@@ -101,5 +101,7 @@ struct
       | convert (EVar s) = raise Fail ("variable: " ^ s)
     end
 
-    fun foobar s = (convert o parse o lex o explode) s
+    val transform = (convert o parse o lex o explode)
+    val stransform = (U.unparse o transform)
+    val exec = (U.eval o transform)
 end

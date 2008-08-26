@@ -72,6 +72,8 @@ struct
     fun check () = (print ((Int.toString (!cnt)) ^ "\n"))
     end
 
+
+
     fun eval (EApp (e1, e2)) = 
         let
             val v1 = eval e1
@@ -95,7 +97,7 @@ struct
       | apply (VD, _) = raise Fail "hono fuxed"
       | apply (VPromise eg, h) = (apply (eval eg, h))
 
-    fun exec s = (eval o parse o lex o explode) s
+    val exec = (eval o parse o lex o explode)
 
 end
 
