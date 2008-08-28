@@ -24,9 +24,9 @@ ws = [\ \t];
 
 {ws}+    => (lex());
 
-"^"      => (T.LAMBDA(!pos, !pos));
-"("      => (T.LPAREN(!pos,!pos));
-")"      => (T.RPAREN(!pos,!pos));
-"\."     => (T.DOT(!pos,!pos));
-{alnum}  => (T.NAME(yytext,!pos,!pos));
+"^"      => (T.LAMBDA(yypos, yypos));
+"("      => (T.LPAREN(yypos,yypos));
+")"      => (T.RPAREN(yypos,yypos));
+"\."     => (T.DOT(yypos,yypos));
+{alnum}  => (T.NAME(yytext,yypos,yypos));
 

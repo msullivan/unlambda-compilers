@@ -101,7 +101,8 @@ struct
       | convert (EVar s) = raise Fail ("variable: " ^ s)
     end
 
-    val transform = (convert o parse o lex o explode)
+    val load = (parse o lex o explode)
+    val transform = (convert o load)
     val stransform = (U.unparse o transform)
     val exec = (U.eval o transform)
 end

@@ -11,6 +11,9 @@ struct
     structure ParserData = LambdaLrVals.ParserData
     structure Lex = LambdaLex)
 
+    structure U = Unlambda
+    structure UY = Unlambdaify
+
     (* what the fuck annoying *)
     fun str_once s =
         let
@@ -38,4 +41,8 @@ struct
             res
         end
 
+    val load = parse
+    val transform = (UY.convert o load)
+    val stransform = (U.unparse o transform)
+    val exec = (U.eval o transform)
 end
