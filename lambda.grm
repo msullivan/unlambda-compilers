@@ -1,0 +1,38 @@
+structure L = Unlambdaify
+
+%%
+
+%pos int
+
+%term EOF
+    | LAMBDA
+    | DOT
+    | LPAREN
+    | RPAREN
+    | NAME of string
+
+%nonterm START of L.expr
+       | NAMELIST of string list
+       | EXPR of L.expr
+       | B of L.expr
+
+%name Lambda
+
+%pure
+%eop EOF
+%noshift EOF
+
+%%
+
+START : EXPR                       (EXPR)
+
+EXPR : LAMBDA NAMELIST DOT EXPR    (foldr L.ELambda EXPR NAMELIST)
+     | EXPR B                      (L.EApp(EXPR, B))
+     | B                           (B)
+
+B : NAME                           (L.EVar NAME)
+  | LPAREN EXPR RPAREN             (EXPR)
+
+NAMELIST : NAME NAMELIST           (NAME::NAMELIST)
+         | NAME                    ([NAME])
+

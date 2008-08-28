@@ -1,5 +1,9 @@
 Group is
       $/smlnj-lib.cm
       $/basis.cm
+	  $/ml-yacc-lib.cm
       unlambda.sml
       unlambdaify.sml
+	  lambda.lex
+	  lambda.grm
+	  lambda.sml
