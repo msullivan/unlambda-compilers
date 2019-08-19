@@ -52,12 +52,14 @@ struct
     structure U = Unlambda
 
     datatype bot = Bot of bot
+    fun abort (Bot x) = abort x
     type 'a cont = 'a -> bot
 
     fun delay (f : unit -> 'a) (k : 'a cont) = k (f ())
     fun return x = delay (fn () => x)
     fun bind (x: 'a cont cont) (f : 'a -> 'b cont cont) : 'b cont cont =
-        raise Fail ""
+        fn k: 'b cont => x (fn vx => f vx k)
+    fun triple_neg (x: 'a cont cont cont) : 'a cont = fn a => x (return a)
 
     datatype F = F of (F * F cont) cont cont cont
     fun unF (F x) = x
@@ -65,17 +67,27 @@ struct
             bind x (
                 fn kx: (F * F cont) cont =>
                    fn k': (F * F cont) cont cont =>
-                      kx (y, fn k'' => k'' 0)
+                      kx (y, fn (F z) => return k' z)
             )
         )
-(*
     infix $$
     val (op $$) = ap
 
-    fun go (F x) = let val x' = x () in F (fn () => x') end
+    (* This is really bad. *)
+    fun go (F x) =
+        let exception E of F
+        in (x (fn k: (F * F cont) cont => raise E (F (return k))); raise Fail "")
+           handle E a => a
+        end
 
-    fun G f = F (fn () => fn k => fn x => k (f (go x)))
+                     (*
+    fun G f = F (delay (fn () => fn (x, k): (F * F cont) => k (f (go x))))
+                     *)
 
+    fun G f = F (fn k: (F * F cont) cont cont =>
+                    k (fn (x, k') => k' (f (go x))))
+
+(*            delay (fn () => fn (x, k): (F * F cont) => k (f (go x))))                *)
     (* Direct implementations of unlambda stuff *)
     val ul_I = G (fn x => x)
     val ul_K = G (fn x => G (fn _ => x))
@@ -109,8 +121,12 @@ struct
     fun selfify (U.EApp (x, y)) = (selfify x) $$ (selfify y)
       | selfify (U.EFunc f) = selfify_value f
 
-    fun run (F x) = x () (fn _ => ()) (*ul_I*)
+    fun run (F x) =
+        let exception Done
+        in abort (x (fn _ => raise Done))
+           handle Done => ()
+        end
 
     val exec = run o selfify o U.load
-*)
+
 end
