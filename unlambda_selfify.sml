@@ -25,8 +25,6 @@ struct
                CC.callcc (fn k => x $$ G (fn y => CC.throw k y)))
     val ul_D = F (fn () => fn x => F (fn () => fn y => x $$ y))
 
-
-
     (* An unlambda "compiler" *)
     (* We could also output source code instead of just
      * constructing the objects, which I leave as a simple exercise for the reader. *)
@@ -53,11 +51,24 @@ struct
 
     structure U = Unlambda
 
-    datatype F = F of ((unit -> F) -> unit) -> F -> unit
+    datatype bot = Bot of bot
+    type 'a cont = 'a -> bot
+
+    fun delay (f : unit -> 'a) (k : 'a cont) = k (f ())
+    fun return x = delay (fn () => x)
+    fun bind (x: 'a cont cont) (f : 'a -> 'b cont cont) : 'b cont cont =
+        raise Fail ""
+
+    datatype F = F of (F * F cont) cont cont cont
     fun unF (F x) = x
-    fun ap (x, y) = F (
-            fn () => fn k => fn z =>
-               (unF x () (fn vx => (unF vx () k z))) y)
+    fun ap (F x, y) = F (
+            bind x (
+                fn kx: (F * F cont) cont =>
+                   fn k': (F * F cont) cont cont =>
+                      kx (y, fn k'' => k'' 0)
+            )
+        )
+(*
     infix $$
     val (op $$) = ap
 
@@ -101,4 +112,5 @@ struct
     fun run (F x) = x () (fn _ => ()) (*ul_I*)
 
     val exec = run o selfify o U.load
+*)
 end
