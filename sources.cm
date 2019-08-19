@@ -3,6 +3,7 @@ Group is
       $/basis.cm
 	  $/ml-yacc-lib.cm
       unlambda.sml
+      unlambda_selfify.sml
       unlambdaify.sml
 	  lambda.lex
 	  lambda.grm

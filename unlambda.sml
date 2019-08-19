@@ -5,7 +5,7 @@ struct
 
     structure CC = SMLofNJ.Cont
 
-    datatype token = TApp | TK | TS | TI | TV | TC | TD | 
+    datatype token = TApp | TK | TS | TI | TV | TC | TD |
              TDot of char
 
     fun lex nil = nil
@@ -30,7 +30,7 @@ struct
                    | VDot of char
 
     fun unparse (EApp (e1, e2)) = "`" ^ (unparse e1) ^ (unparse e2)
-      | unparse (EFunc f) = 
+      | unparse (EFunc f) =
         (case f
           of VK => "k" | VS => "s" | VI => "i" | VV => "v" | VC => "c"
            | VD => "d" | (VDot c) => (implode [#".", c])
@@ -60,24 +60,26 @@ struct
             else exp
         end
 
-    fun putc c = print (implode [c])
+    fun real_putc c = print (implode [c])
 
     local
         val cnt = ref 0
     in
     fun peek () = !cnt
     fun reset () = cnt := 0
-    fun putc c = 
-        if c = #"\n" then 
+    fun count_putc c =
+        if c = #"\n" then
             (print ((Int.toString (!cnt)) ^ "\n"); cnt := 0)
         else
             cnt := (!cnt + 1)
     end
 
-    fun eval (EApp (e1, e2)) = 
+    val putc = real_putc
+
+    fun eval (EApp (e1, e2)) =
         let
             val v1 = eval e1
-        in 
+        in
             case v1 of VD => (VPromise e2)
                      | _ => (apply (v1, eval e2))
         end
@@ -86,24 +88,17 @@ struct
       | apply (VK1 x, y) = x
       | apply (VS, x) = VS1 x
       | apply (VS1 x, y) = VS2 (x, y)
-      | apply (VS2 (x, y), z) = 
+      | apply (VS2 (x, y), z) =
         apply(apply(x, z), apply(y, z))
       | apply (VI, x) = x
       | apply (VV, _) = VV
-      | apply (VDot c, x) = (putc c; x) 
+      | apply (VDot c, x) = (putc c; x)
       | apply (VC, x) =
         CC.callcc (fn cont => apply (x, VCont cont))
       | apply (VCont cont, x) = CC.throw cont x
-      | apply (VD, _) = raise Fail "hono fuxed"
+      | apply (VD, x) = VPromise (EFunc x)
       | apply (VPromise eg, h) = (apply (eval eg, h))
 
     val load = (parse o lex o explode)
     val exec = (eval o load)
 end
-
-
-(*
-val fibo = "```s``s``sii`ki  `k.*``s``s`ks" ^
-           "``s`k`s`ks``s``s`ks``s`k`s`kr``s`k`sikk" ^
-           "`k``s`ksk"
-*)

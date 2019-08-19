@@ -4,12 +4,36 @@ struct
     structure UY = Unlambdaify
     structure L = Lambda
 
-    fun mix ul l = 
+    fun mix ul l =
         (UY.EApp (UY.load ul, L.load l))
 
     val PR = "^n`r``$n.*i"
     fun ntest s = (U.eval (UY.convert ((mix PR s))))
 
+
+
+    val fibo = "```s``s``sii`ki  `k.*``s``s`ks" ^
+               "``s`k`s`ks``s``s`ks``s`k`s`kr``s`k`sikk" ^
+               "`k``s`ksk"
+
+    val count2 = "``r`cd`.*`cd"
+
+    val trivial1 =
+        "```sii``si``s" ^
+        "`k`d`r`.!`.l`.a`.i`.v`.i`.r`.t`. `.t`.s`.e`.'`.c`. `.,`.a`.d`.b`.m`.a`.l`.n.U" ^
+        "i"
+
+    val trivial2 =
+        "```si``s" ^
+        "`k`d`r`.!`.l`.a`.i`.v`.i`.r`.t`. `.t`.s`.e`.'`.c`. `.,`.a`.d`.b`.m`.a`.l`.n.U" ^
+        "i`c``sii"
+
+    val trivial3 =
+        "```sii``si``s" ^
+        "``s`kr``s`k.!``s`k.l``s`k.a``s`k.i``s`k.v``s`k.i``s`k.r``s`k.t" ^
+        "``s`k. ``s`k.t``s`k.s``s`k.e``s`k.'``s`k.c``s`k. ``s`k.," ^
+        "``s`k.a``s`k.d``s`k.b``s`k.m``s`k.a``s`k.l``s`k.n`k.U" ^
+        "i"
 
 
     val N0 = "(^sz.z)"
