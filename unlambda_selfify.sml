@@ -69,17 +69,6 @@ struct
         )
     infix $$
     val (op $$) = ap
-(*
-    (* This is really bad. *)
-    fun go (F x) =
-        let exception E of F
-        in (x (fn k: (F * F cont) cont => raise E (F (return k))); raise Fail "")
-           handle E a => a
-        end
-
-    fun G' f = F (fn k: (F * F cont) cont cont =>
-                    k (fn (x, k') => k' (f (go x))))
-*)
 
     fun go (F x) k = x (fn k' => k (F (return k')))
     fun G (f: (F * F cont) cont) : F =
