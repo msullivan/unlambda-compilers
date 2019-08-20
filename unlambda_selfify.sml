@@ -47,8 +47,6 @@ end
 
 structure UnlambdaSelfify2 =
 struct
-    structure CC = SMLofNJ.Cont
-
     structure U = Unlambda
 
     datatype bot = Bot of bot
@@ -59,7 +57,6 @@ struct
     fun return x = delay (fn () => x)
     fun bind (x: 'a cont cont) (f : 'a -> 'b cont cont) : 'b cont cont =
         fn k: 'b cont => x (fn vx => f vx k)
-    fun triple_neg (x: 'a cont cont cont) : 'a cont = fn a => x (return a)
 
     datatype F = F of (F * F cont) cont cont cont
     fun unF (F x) = x
@@ -72,7 +69,7 @@ struct
         )
     infix $$
     val (op $$) = ap
-
+(*
     (* This is really bad. *)
     fun go (F x) =
         let exception E of F
@@ -80,28 +77,34 @@ struct
            handle E a => a
         end
 
-                     (*
-    fun G f = F (delay (fn () => fn (x, k): (F * F cont) => k (f (go x))))
-                     *)
-
-    fun G f = F (fn k: (F * F cont) cont cont =>
+    fun G' f = F (fn k: (F * F cont) cont cont =>
                     k (fn (x, k') => k' (f (go x))))
-
-(*            delay (fn () => fn (x, k): (F * F cont) => k (f (go x))))                *)
-    (* Direct implementations of unlambda stuff *)
-    val ul_I = G (fn x => x)
-    val ul_K = G (fn x => G (fn _ => x))
-    val ul_S = G (fn x => G (fn y => G (fn z => (x $$ z) $$ (y $$ z))))
-    fun ul_V' _ = G (ul_V')
-    val ul_V = G (ul_V')
-    fun ul_Dot c = G (fn x => (U.putc c; x))
-(*
-    val ul_C = G (
-            fn x =>
-               CC.callcc (fn k => x $$ G (fn y => CC.throw k y)))
-    val ul_D = F (fn () => fn x => F (fn () => fn y => x $$ y))
-
 *)
+
+    fun go (F x) k = x (fn k' => k (F (return k')))
+    fun G (f: (F * F cont) cont) : F =
+        F (fn k: (F * F cont) cont cont =>
+              k (fn (x, k''): (F * F cont) => go x (fn xv => f (xv, k''))))
+
+
+    (* Direct implementations of unlambda stuff *)
+    val ul_I = G (fn (x, k) => k x)
+    val ul_K = G (fn (x, k) => k (G (fn (_, k') => k' x)))
+    val ul_S = G (fn (x, k) =>
+                     k (G (fn (y, k') =>
+                              k' (G (fn (z, k'') => k'' ((x $$ z) $$ (y $$ z)))))))
+
+    fun ul_V' (_, k') = k' (G (ul_V'))
+    val ul_V = G (ul_V')
+    fun ul_Dot c = G (fn (x, k) => (U.putc c; k x))
+    val ul_C = F (return
+            (fn (x, k) =>
+                k (x $$ F (return (fn (y, _) => k y)))))
+
+
+    val ul_D = F (return (fn (x, k) =>
+                             k (F (return (fn (y, k') => k' (x $$ y))))))
+
 
     (* An unlambda "compiler" *)
     (* We could also output source code instead of just
@@ -113,10 +116,8 @@ struct
          | U.VS => ul_S
          | U.VV => ul_V
          | U.VDot c => ul_Dot c
-(*
          | U.VC => ul_C
          | U.VD => ul_D
-*)
          | _ => raise Fail "internal representation")
     fun selfify (U.EApp (x, y)) = (selfify x) $$ (selfify y)
       | selfify (U.EFunc f) = selfify_value f
@@ -126,7 +127,5 @@ struct
         in abort (x (fn _ => raise Done))
            handle Done => ()
         end
-
     val exec = run o selfify o U.load
-
 end
