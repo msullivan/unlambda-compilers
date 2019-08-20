@@ -60,22 +60,6 @@ struct
             else exp
         end
 
-    fun real_putc c = print (implode [c])
-
-    local
-        val cnt = ref 0
-    in
-    fun peek () = !cnt
-    fun reset () = cnt := 0
-    fun count_putc c =
-        if c = #"\n" then
-            (print ((Int.toString (!cnt)) ^ "\n"); cnt := 0)
-        else
-            cnt := (!cnt + 1)
-    end
-
-    val putc = real_putc
-
     fun eval (EApp (e1, e2)) =
         let
             val v1 = eval e1
@@ -92,7 +76,7 @@ struct
         apply(apply(x, z), apply(y, z))
       | apply (VI, x) = x
       | apply (VV, _) = VV
-      | apply (VDot c, x) = (putc c; x)
+      | apply (VDot c, x) = (Output.putc c; x)
       | apply (VC, x) =
         CC.callcc (fn cont => apply (x, VCont cont))
       | apply (VCont cont, x) = CC.throw cont x

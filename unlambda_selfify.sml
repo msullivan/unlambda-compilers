@@ -19,7 +19,7 @@ struct
     val ul_S = G (fn x => G (fn y => G (fn z => (x $$ z) $$ (y $$ z))))
     fun ul_V' _ = G (ul_V')
     val ul_V = G (ul_V')
-    fun ul_Dot c = G (fn x => (U.putc c; x))
+    fun ul_Dot c = G (fn x => (Output.putc c; x))
     val ul_C = G (
             fn x =>
                CC.callcc (fn k => x $$ G (fn y => CC.throw k y)))
@@ -96,7 +96,7 @@ struct
 
     fun ul_V' (_, k') = k' (G (ul_V'))
     val ul_V = G (ul_V')
-    fun ul_Dot c = G (fn (x, k) => (U.putc c; k x))
+    fun ul_Dot c = G (fn (x, k) => (Output.putc c; k x))
     val ul_C = F (return
             (fn (x, k) =>
                 k (x $$ F (return (fn (y, _) => k y)))))
