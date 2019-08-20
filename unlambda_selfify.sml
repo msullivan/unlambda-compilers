@@ -1,4 +1,18 @@
-structure UnlambdaSelfify =
+signature UNLAMBDA_REPR =
+  sig
+    type F
+    val ap : F * F -> F
+    val ul_I : F
+    val ul_K : F
+    val ul_S : F
+    val ul_V : F
+    val ul_Dot : char -> F
+    val ul_C : F
+    val ul_D : F
+    val run : F -> unit
+  end
+
+structure UnlambdaCallccRepr : UNLAMBDA_REPR =
 struct
     structure CC = SMLofNJ.Cont
 
@@ -25,39 +39,21 @@ struct
                CC.callcc (fn k => x $$ G (fn y => CC.throw k y)))
     val ul_D = F (fn () => fn x => F (fn () => fn y => x $$ y))
 
-    (* An unlambda "compiler" *)
-    (* We could also output source code instead of just
-     * constructing the objects, which I leave as a simple exercise for the reader. *)
-    fun selfify_value v = (
-        case v of
-           U.VI => ul_I
-         | U.VK => ul_K
-         | U.VS => ul_S
-         | U.VV => ul_V
-         | U.VDot c => ul_Dot c
-         | U.VC => ul_C
-         | U.VD => ul_D
-         | _ => raise Fail "internal representation")
-    fun selfify (U.EApp (x, y)) = (selfify x) $$ (selfify y)
-      | selfify (U.EFunc f) = selfify_value f
-
-    val exec = ignore o go o selfify o U.load
+    val run = ignore o go
 end
 
 
-structure UnlambdaSelfify2 =
+structure UnlambdaCpsRepr : UNLAMBDA_REPR =
 struct
-    structure U = Unlambda
-
     datatype bot = Bot of bot
     fun abort (Bot x) = abort x
     type 'a cont = 'a -> bot
 
-    fun delay (f : unit -> 'a) (k : 'a cont) = k (f ())
-    fun return x = delay (fn () => x)
+    fun return x = fn k: 'a cont => k x
     fun bind (x: 'a cont cont) (f : 'a -> 'b cont cont) : 'b cont cont =
         fn k: 'b cont => x (fn vx => f vx k)
 
+    (* Fun fact: the CPS equivalent of `unit -> A` is `A cont cont` *)
     datatype F = F of (F * F cont) cont cont cont
     fun unF (F x) = x
     fun ap (F x, y) = F (
@@ -94,7 +90,19 @@ struct
     val ul_D = F (return (fn (x, k) =>
                              k (F (return (fn (y, k') => k' (x $$ y))))))
 
+    fun run (F x) =
+        let exception Done
+        in abort (x (fn _ => raise Done))
+           handle Done => ()
+        end
+end
 
+functor UnlambdaSelfifier(R : UNLAMBDA_REPR) =
+struct
+local
+    open R
+    structure U = Unlambda
+in
     (* An unlambda "compiler" *)
     (* We could also output source code instead of just
      * constructing the objects, which I leave as a simple exercise for the reader. *)
@@ -108,13 +116,17 @@ struct
          | U.VC => ul_C
          | U.VD => ul_D
          | _ => raise Fail "internal representation")
-    fun selfify (U.EApp (x, y)) = (selfify x) $$ (selfify y)
+    fun selfify (U.EApp (x, y)) = ap (selfify x, selfify y)
       | selfify (U.EFunc f) = selfify_value f
 
-    fun run (F x) =
-        let exception Done
-        in abort (x (fn _ => raise Done))
-           handle Done => ()
-        end
-    val exec = run o selfify o U.load
+    fun exec_ex count s =
+        (Output.reset();
+         Output.count := count;
+         run (selfify (U.load (s))))
+
+    val exec = exec_ex true
 end
+end
+
+structure UnlambdaCallcc = UnlambdaSelfifier(UnlambdaCallccRepr)
+structure UnlambdaCps = UnlambdaSelfifier(UnlambdaCpsRepr)
