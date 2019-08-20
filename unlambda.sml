@@ -8,6 +8,10 @@ struct
     datatype token = TApp | TK | TS | TI | TV | TC | TD |
              TDot of char
 
+    fun skip_line nil = nil
+      | skip_line (#"\n"::s) = s
+      | skip_line (_::s) = skip_line s
+
     fun lex nil = nil
       | lex (#"`"::s) = TApp::(lex s)
       | lex (#"k"::s) = TK::(lex s)
@@ -21,7 +25,8 @@ struct
       | lex (#" "::s) = lex s
       | lex (#"\t"::s) = lex s
       | lex (#"\n"::s) = lex s
-      | lex _ = raise LexError
+      | lex (#"#"::s) = lex (skip_line s)
+      | lex (_::s) = raise LexError
 
     datatype expr = EApp of (expr * expr) | EFunc of value
          and value = VK | VK1 of value | VS | VS1 of value
