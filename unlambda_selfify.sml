@@ -105,7 +105,7 @@ local
 in
     (* An unlambda "compiler" *)
     (* We could also output source code instead of just
-     * constructing the objects, which I leave as a simple exercise for the reader. *)
+     * constructing the objects, which we do below *)
     fun selfify_value v = (
         case v of
            U.VI => ul_I
@@ -122,11 +122,38 @@ in
     fun exec_ex count s =
         (Output.reset();
          Output.count := count;
-         run (selfify (U.load (s))))
+         run (selfify (U.load s)))
 
     val exec = exec_ex true
 end
 end
+
+structure UnlambdaCompiler =
+struct
+local
+    structure U = Unlambda
+in
+    (* An unlambda compiler that outputs SML source *)
+    fun compile_func v = (
+        case v of
+           U.VI => "I"
+         | U.VK => "K"
+         | U.VS => "S"
+         | U.VV => "V"
+         | U.VDot c => "Dot #\"" ^ Char.toString c ^ "\""
+         | U.VC => "C"
+         | U.VD => "D"
+         | _ => raise Fail "internal representation")
+    fun compile' (U.EApp (x, y)) = "ap (" ^ compile' x ^ ", " ^ compile' y ^ ")"
+      | compile' (U.EFunc f) = "ul_" ^ compile_func f
+
+    fun compile impl e = "let open " ^ impl ^ " in " ^ compile' e  ^ " end\n"
+
+    val compile_callcc = compile "UnlambdaCallccRepr"
+    val compile_cps = compile "UnlambdaCpsRepr"
+end
+end
+
 
 structure UnlambdaCallcc = UnlambdaSelfifier(UnlambdaCallccRepr)
 structure UnlambdaCps = UnlambdaSelfifier(UnlambdaCpsRepr)
