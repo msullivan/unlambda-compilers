@@ -6,8 +6,8 @@ struct
     structure U = Unlambda
 
     type ident = string
-                            
-    datatype token = TApp | TK | TS | TI | TV | TC | TD | 
+
+    datatype token = TApp | TK | TS | TI | TV | TC | TD |
              TDot of char | TLambda of char | TVar of char
 
     fun lex nil = nil
@@ -91,7 +91,7 @@ struct
                 elim' x e
             end
 
-        val fconv = 
+        val fconv =
             (fn VK => U.VK | VS => U.VS | VI => U.VI | VV => U.VV
               | VC => U.VC | VD => U.VD | (VDot c) => (U.VDot c))
     in
@@ -104,5 +104,5 @@ struct
     val load = (parse o lex o explode)
     val transform = (convert o load)
     val stransform = (U.unparse o transform)
-    val exec = (U.eval o transform)
+    val exec = (UnlambdaInterp.eval o transform)
 end

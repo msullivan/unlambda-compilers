@@ -34,15 +34,15 @@ struct
             val stream = LambdaParser.makeLexer(str_once s)
             fun print_error (s,i:int,_) =
                 TextIO.output(TextIO.stdOut,
-                              "Error, line " ^ 
+                              "Error, line " ^
                               (Int.toString i) ^ ", " ^ s ^ "\n")
             val (res, _) = LambdaParser.parse(0,stream,print_error,())
-        in 
+        in
             res
         end
 
     val load = parse
     val transform = (UY.convert o load)
     val stransform = (U.unparse o transform)
-    val exec = (U.eval o transform)
+    val exec = (UnlambdaInterp.eval o transform)
 end

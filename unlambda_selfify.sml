@@ -114,8 +114,7 @@ in
          | U.VV => ul_V
          | U.VDot c => ul_Dot c
          | U.VC => ul_C
-         | U.VD => ul_D
-         | _ => raise Fail "internal representation")
+         | U.VD => ul_D)
     fun selfify (U.EApp (x, y)) = ap (selfify x, selfify y)
       | selfify (U.EFunc f) = selfify_value f
 
@@ -142,8 +141,7 @@ in
          | U.VV => "V"
          | U.VDot c => "Dot #\"" ^ Char.toString c ^ "\""
          | U.VC => "C"
-         | U.VD => "D"
-         | _ => raise Fail "internal representation")
+         | U.VD => "D")
     fun compile' (U.EApp (x, y)) = "ap (" ^ compile' x ^ ", " ^ compile' y ^ ")"
       | compile' (U.EFunc f) = "ul_" ^ compile_func f
 

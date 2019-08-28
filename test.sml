@@ -8,7 +8,7 @@ struct
         (UY.EApp (UY.load ul, L.load l))
 
     val PR = "^n`r``$n.*i"
-    fun ntest s = (U.eval (UY.convert ((mix PR s))))
+    fun ntest s = (UnlambdaInterp.eval (UY.convert ((mix PR s))))
 
 
 
