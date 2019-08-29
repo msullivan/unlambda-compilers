@@ -25,6 +25,8 @@ struct
     val (op $$) = ap
 
     fun go (F x) = let val x' = x () in F (fn () => x') end
+
+    fun go (F x) = (fn x' => F (fn () => x')) (x ())
     fun G f = F (fn () => fn x => f (go x))
 
     (* Direct implementations of unlambda stuff *)
@@ -41,6 +43,67 @@ struct
 
     val run = ignore o go
 end
+
+structure Unlambda2UnlambdaNoob =
+struct
+    structure L = Unlambdaify
+    structure U = Unlambda
+
+    val ` = L.ELambda
+    infix $$
+    val (op $$) = L.EApp
+    val % = L.EVar
+
+
+    fun expand_unlambda_value v =
+        let val (x, y, z) = ("x", "y", "z") in
+        (case v of
+             U.VI => `(x, %x)
+           | U.VK => `(x, `(y, %x))
+           | U.VS => `(x, `(y, `(z, (%x $$ %z) $$ (%y $$ %z))))
+           | U.VV => let val v = `(x, `(y, %x $$ %x)) in v $$ v end
+
+           (* d is left unexpanded *)
+           | U.VD => L.EFunc L.VD
+           (* other combinators are expanded to force evaluation in the next pass *)
+           | (U.VDot c) => `(x, (L.EFunc (L.VDot c) $$ %x))
+           | (U.VC) => `(x, L.EFunc L.VC $$ %x)
+        )
+        end
+    fun expand_unlambda (U.EApp (e1, e2)) =
+        L.EApp (expand_unlambda e1, expand_unlambda e2)
+      | expand_unlambda (U.EFunc v) = expand_unlambda_value v
+
+                  (* ^h^x`$h$h *)
+
+(*
+    datatype F = F of unit -> F -> F
+    fun unF (F x) = x
+    fun ap (x, y) = F (fn () => unF ((unF x) () y) ())
+    infix $$
+    val (op $$) = ap
+
+    fun go (F x) = let val x' = x () in F (fn () => x') end
+
+    fun go (F x) = (fn x' => F (fn () => x')) (x ())
+    fun G f = F (fn () => fn x => f (go x))
+
+    (* Direct implementations of unlambda stuff *)
+    val ul_I = G (fn x => x)
+    val ul_K = G (fn x => G (fn _ => x))
+    val ul_S = G (fn x => G (fn y => G (fn z => (x $$ z) $$ (y $$ z))))
+    fun ul_V' _ = G (ul_V')
+    val ul_V = G (ul_V')
+    fun ul_Dot c = G (fn x => (Output.putc c; x))
+    val ul_C = G (
+            fn x =>
+               CC.callcc (fn k => x $$ G (fn y => CC.throw k y)))
+    val ul_D = F (fn () => fn x => F (fn () => fn y => x $$ y))
+
+    val run = ignore o go
+*)
+end
+
 
 
 structure UnlambdaCpsRepr : UNLAMBDA_REPR =
@@ -118,12 +181,9 @@ in
     fun selfify (U.EApp (x, y)) = ap (selfify x, selfify y)
       | selfify (U.EFunc f) = selfify_value f
 
-    fun exec_ex count s =
+    fun exec count c =
         (Output.reset();
-         Output.count := count;
-         run (selfify (U.load s)))
-
-    val exec = exec_ex true
+         run (selfify c))
 end
 end
 

@@ -107,6 +107,8 @@ struct
       | apply (VPromise eg, h) = (apply (eval eg, h))
 
 
-    val eval = eval o convert
+    val eval' = eval
+    fun eval e = (Output.reset();
+                  eval' (convert e))
     val exec = eval o Unlambda.load
 end

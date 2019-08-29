@@ -30,9 +30,8 @@ EXPR : LAMBDA NAMELIST DOT EXPR    (foldr L.ELambda EXPR NAMELIST)
      | EXPR B                      (L.EApp(EXPR, B))
      | B                           (B)
 
-B : NAME                           (L.EVar NAME)
+B : NAME                           (if NAME = "C" then L.EFunc L.VC else L.EVar NAME)
   | LPAREN EXPR RPAREN             (EXPR)
 
 NAMELIST : NAME NAMELIST           (NAME::NAMELIST)
          | NAME                    ([NAME])
-
