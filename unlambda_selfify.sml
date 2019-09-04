@@ -93,7 +93,56 @@ struct
         `(u_, `(x, L.EFunc L.VC $$ `(y, %x $$ unit $$ `(u_, %y))))
       | delay (EFunc v) = `(u_, EFunc v)
 
-    fun delay_top e = delay e $$ unit
+    fun delay_program e = delay e $$ unit
+    end
+
+    local
+        open L
+
+        val unit = EFunc VI
+        val (dx, dy, df, du) = ("____dx", "____dy", "____df", "____du")
+        val k = "____k"
+
+        fun return e = `(k, %k $$ e)
+        fun bind action f =
+            `(k, action $$ `(du, f $$ %du $$ %k))
+    in
+
+    fun cps_convert e =
+        let
+            fun cps e =
+                (case e of
+                     EVar x => return (%x)
+                   | ELambda (x, e) => return (`(x, cps e))
+                     (*
+                   | EApp (e1, e2) =>
+                     bind (cps e1)
+                     (`(dx,
+                        bind (cps e2)
+                        (`(dy, %dx $$ %dy))))
+                     *)
+                   (* Inline the binds *)
+                   | EApp (e1, e2) =>
+                     `(k,
+                       cps e1 $$
+                       (`(dx,
+                          cps e2 $$
+                          (`(dy, %dx $$ %dy $$ %k)))))
+
+                   | EFunc (VDot c) =>
+                     return (`(dy, `(k, %k $$ (EFunc (VDot c) $$ %dy))))
+
+                   (* We support this one just for its use as unit *)
+                   | EFunc VI => return e
+                   (* The point of all this *)
+                   | EFunc VC =>
+                     return (`(df, `(k, %df $$ `(dy, `(u_, %k $$ %dy)) $$ %k)))
+                   | EFunc _ => raise Fail "func unsupported in cps"
+                )
+
+        in cps e end
+
+    fun cps_program e = cps_convert e $$ EFunc VI
     end
 end
 
