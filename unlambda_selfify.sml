@@ -44,7 +44,7 @@ struct
     val run = ignore o go
 end
 
-structure Unlambda2UnlambdaNoob =
+structure LowerUnlambda =
 struct
     structure L = Unlambdaify
     structure U = Unlambda
@@ -54,9 +54,9 @@ struct
     val (op $$) = L.EApp
     val % = L.EVar
 
+    val (x, x', y, z, u_) = ("x", "x'", "y", "z", "_")
 
     fun expand_unlambda_value v =
-        let val (x, y, z) = ("x", "y", "z") in
         (case v of
              U.VI => `(x, %x)
            | U.VK => `(x, `(y, %x))
@@ -65,43 +65,32 @@ struct
 
            (* d is left unexpanded *)
            | U.VD => L.EFunc L.VD
-           (* other combinators are expanded to force evaluation in the next pass *)
            | (U.VDot c) => `(x, (L.EFunc (L.VDot c) $$ %x))
            | (U.VC) => `(x, L.EFunc L.VC $$ %x)
         )
-        end
     fun expand_unlambda (U.EApp (e1, e2)) =
         L.EApp (expand_unlambda e1, expand_unlambda e2)
       | expand_unlambda (U.EFunc v) = expand_unlambda_value v
 
-                  (* ^h^x`$h$h *)
+    local
+        open L
+        val unit = EFunc VI
+        fun go e = `(x', `(u_, %x')) $$ (e $$ unit)
+        val (dx, dy) = ("____dx", "____dy")
+    in
+    fun delay (EVar k) = EVar k
+      | delay (EApp (e1, e2)) =
+        `(u_, delay e1 $$ unit $$ delay e2 $$ unit)
+      | delay (ELambda (x, e)) =
+        `(u_, `(dy, `(x, delay e) $$ (go (%dy)) ))
+      | delay (EFunc VD) =
+        `(u_, `(dx, `(u_, `(dy, `(u_, %dx $$ unit $$ %dy $$ unit)))))
+      | delay (EFunc VC) =
+        `(u_, `(x, L.EFunc L.VC $$ `(y, %x $$ unit $$ `(u_, %y))))
+      | delay (EFunc v) = `(u_, EFunc v)
 
-(*
-    datatype F = F of unit -> F -> F
-    fun unF (F x) = x
-    fun ap (x, y) = F (fn () => unF ((unF x) () y) ())
-    infix $$
-    val (op $$) = ap
-
-    fun go (F x) = let val x' = x () in F (fn () => x') end
-
-    fun go (F x) = (fn x' => F (fn () => x')) (x ())
-    fun G f = F (fn () => fn x => f (go x))
-
-    (* Direct implementations of unlambda stuff *)
-    val ul_I = G (fn x => x)
-    val ul_K = G (fn x => G (fn _ => x))
-    val ul_S = G (fn x => G (fn y => G (fn z => (x $$ z) $$ (y $$ z))))
-    fun ul_V' _ = G (ul_V')
-    val ul_V = G (ul_V')
-    fun ul_Dot c = G (fn x => (Output.putc c; x))
-    val ul_C = G (
-            fn x =>
-               CC.callcc (fn k => x $$ G (fn y => CC.throw k y)))
-    val ul_D = F (fn () => fn x => F (fn () => fn y => x $$ y))
-
-    val run = ignore o go
-*)
+    fun delay_top e = delay e $$ unit
+    end
 end
 
 

@@ -1,3 +1,9 @@
+structure StringDict = SplayMapFn(
+    struct
+        type ord_key = string
+        val compare = String.compare
+    end)
+
 structure Unlambdaify =
 struct
     exception LexError
@@ -63,6 +69,16 @@ struct
             else exp
         end
 
+    fun unparse (EApp (e1, e2)) = "`" ^ (unparse e1) ^ (unparse e2)
+      | unparse (ELambda (s, e)) = "^" ^ s ^ unparse e
+      | unparse (EVar s) = s
+      | unparse (EFunc f) =
+        (case f
+          of VK => "k" | VS => "s" | VI => "i" | VV => "v" | VC => "c"
+           | VD => "d" | VDot #"\n" => "r"
+           | VDot c => (implode [#".", c])
+        )
+
     local
         fun depends x e =
             let
@@ -101,7 +117,46 @@ struct
       | convert (EVar s) = raise Fail ("variable: " ^ s)
     end
 
+
+    structure Ctx = StringDict
+
+    datatype result = RFun of result -> result
+                    | RDelay
+    fun unRFun (RFun f) = f
+      | unRFun RDelay = fn z => z
+
+    fun eval_func f =
+        (case f of
+             VI => RFun (fn x => x)
+           | VK => RFun (fn x => RFun (fn _ => x))
+           | VS => RFun (fn x => RFun (fn y => RFun (fn z =>
+                     unRFun (unRFun x z) (unRFun y z))))
+           | VV => RFun (fn _ => eval_func VV)
+           | VDot c => RFun (fn x => (Output.putc c; x))
+           | VD => RDelay
+           | VC => RFun (
+                      fn x =>
+                         SMLofNJ.Cont.callcc (fn k => unRFun x (
+                                                         RFun (fn y => SMLofNJ.Cont.throw k y))))
+        )
+
+
+    fun eval env e =
+        (case e of
+             EVar v => valOf (Ctx.find (env, v))
+           | EApp (e1, e2) =>
+             (case eval env e1 of
+                  RFun f1 => f1 (eval env e2)
+                | RDelay => RFun (fn r => unRFun (eval env e2) r))
+           | ELambda (v, e) =>
+             RFun (fn r => eval (Ctx.insert (env, v, r)) e)
+           | EFunc k => eval_func k
+        )
+
+    val evalTop = eval Ctx.empty
+
     val load = (parse o lex o explode)
+    val exec' = evalTop o load
     val transform = (convert o load)
     val stransform = (U.unparse o transform)
     val exec = (UnlambdaInterp.eval o transform)
