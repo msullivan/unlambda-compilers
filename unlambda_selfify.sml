@@ -81,6 +81,10 @@ struct
     fun delay (EVar k) = EVar k
       | delay (EApp (e1, e2)) =
         `(u_, delay e1 $$ unit $$ delay e2 $$ unit)
+                              (*
+      | delay (EApp (e1, e2)) =
+        `(dx, `(dy, `(u_, %dx $$ unit $$ %dy $$ unit))) $$ delay e1 $$ delay e2
+                              *)
       | delay (ELambda (x, e)) =
         `(u_, `(dy, `(x, delay e) $$ (go (%dy)) ))
       | delay (EFunc VD) =

@@ -80,43 +80,65 @@ struct
         )
 
     local
-        fun depends x e =
-            let
-                fun depends' (EFunc _) = false
-                  | depends' (EVar x') = x = x'
-                  | depends' (ELambda (x', e)) =
-                    x <> x' andalso depends' e
-                  | depends' (EApp (e1, e2)) =
-                    depends' e1 orelse depends' e2
-            in depends' e end
-
         fun kapp e = EApp (EFunc VK, e)
         fun sapp (x, y) = (EApp(EApp(EFunc VS, x), y))
 
+        fun safe_to_apply e =
+            (case e of
+                 EFunc VK => true
+               | EApp (EFunc VS, _) => true
+
+               (* These ones are more dodgy! *)
+               | EFunc VI => true
+               | EApp (EFunc VK, _) => true
+
+               | _ => false)
+
+        val always_safe = false
+
         fun elim x e =
-            let
-                fun elim' x (EFunc f) = kapp (EFunc f)
-                  | elim' x (EVar x') =
-                    if x = x' then (EFunc VI) else kapp (EVar x')
-                  | elim' x (EApp (e1, e2)) =
-                    sapp (elim x e1, elim x e2)
-                  | elim' x (ELambda (x', e')) =
-                    elim x (elim x' e')
-            in
-                (*if depends x e then elim' x e else kapp e*)
-                elim' x e
-            end
+            (case e of
+                 EFunc f => (kapp (EFunc f), true, false)
+               | EVar x' =>
+                 if x = x'
+                 then (EFunc VI, true, true)
+                 else (kapp (EVar x'), true, false)
+               | ELambda (y, e) =>
+                 let val (e', ysafe, hasy) = elim y e
+                     val (e'', xsafe, hasx) = elim x e'
+                 in
+                     (* XXX: or should it be xsafe??? *)
+                     (if (ysafe orelse always_safe) andalso not hasx
+                      then (kapp e') else e'',
+                      true,
+                      hasx)
+                 end
+               | EApp (e1, e2) =>
+                 let val (e1', safe1, has1) = elim x e1
+                     val (e2', safe2, has2) = elim x e2
+                     val has = has1 orelse has2
+                     val safe = safe1 andalso safe2 andalso safe_to_apply e1
+                 in
+                     (if (safe orelse always_safe) andalso not has
+                      then kapp e
+                      else sapp (e1', e2'),
+                      safe,
+                      has)
+                 end
+
+            )
 
         val fconv =
             (fn VK => U.VK | VS => U.VS | VI => U.VI | VV => U.VV
               | VC => U.VC | VD => U.VD | (VDot c) => (U.VDot c))
     in
     fun convert (EApp (e1, e2)) = (U.EApp (convert e1, convert e2))
-      | convert (ELambda (x, e)) = convert (elim x e)
+      | convert (ELambda (x, e)) =
+        let val (e', _, _) = elim x e
+        in convert e' end
       | convert (EFunc f) = (U.EFunc (fconv f))
       | convert (EVar s) = raise Fail ("variable: " ^ s)
     end
-
 
     structure Ctx = StringDict
 
