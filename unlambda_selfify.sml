@@ -64,9 +64,12 @@ struct
            | U.VV => let val v = `(x, `(y, %x $$ %x)) in v $$ v end
 
            (* d is left unexpanded *)
-           | U.VD => L.EFunc L.VD
+           (* | U.VD => L.EFunc L.VD *)
+           (* XXX: do we need either of these? must explain why *)
+           (* if VDot isn't expanded, we print backward??? *)
            | (U.VDot c) => `(x, (L.EFunc (L.VDot c) $$ %x))
-           | (U.VC) => `(x, L.EFunc L.VC $$ %x)
+           (* | (U.VC) => `(x, L.EFunc L.VC $$ %x) *)
+           | v => L.EFunc v
         )
     fun expand_unlambda (U.EApp (e1, e2)) =
         L.EApp (expand_unlambda e1, expand_unlambda e2)
@@ -76,19 +79,24 @@ struct
         open L
         val unit = EFunc VI
         fun go e = `(x', `(u_, %x')) $$ (e $$ unit)
-        val (dx, dy) = ("____dx", "____dy")
+        (* fun go e = (EFunc VK) $$ (e $$ unit) *)
+        val (dx, dy) = ("d", "e")
+
+        val standalone_app = false
     in
     fun delay (EVar k) = EVar k
       | delay (EApp (e1, e2)) =
-        `(u_, delay e1 $$ unit $$ delay e2 $$ unit)
-                              (*
-      | delay (EApp (e1, e2)) =
-        `(dx, `(dy, `(u_, %dx $$ unit $$ %dy $$ unit))) $$ delay e1 $$ delay e2
-                              *)
+        if standalone_app then
+            `(dx, `(dy, `(u_, %dx $$ unit $$ %dy $$ unit))) $$ delay e1 $$ delay e2
+        else
+            `(u_, delay e1 $$ unit $$ delay e2 $$ unit)
+
       | delay (ELambda (x, e)) =
         `(u_, `(dy, `(x, delay e) $$ (go (%dy)) ))
+
       | delay (EFunc VD) =
         `(u_, `(dx, `(u_, `(dy, `(u_, %dx $$ unit $$ %dy $$ unit)))))
+      (* XXX: is this needed? oh, probably, since we need to delay the cont *)
       | delay (EFunc VC) =
         `(u_, `(x, L.EFunc L.VC $$ `(y, %x $$ unit $$ `(u_, %y))))
       | delay (EFunc v) = `(u_, EFunc v)
@@ -146,6 +154,13 @@ struct
     end
 end
 
+    (*
+- println ((Unlambda.unparse (Unlambdaify.shrink (Unlambdaify.convert (Unlambdaify.load (let val p = Unlambdaify.unparse (LowerUnlambda.delay ( (Unlambdaify.load "`$x$y"))) in String.substring (p, 2, String.size p - 6) end))))));
+``s``s`ks``s``s`ks`k`ks``s``s`ks``s``s`ks`k`ks``s``s`ks``s``s`ks`k`ks``s`kkk`k`k`ki``s``s`ks`k`kk`ki`k`k`ki
+
+``s``s`ks``s`k`s`ks``s``s`ks``s`kk``s`ks``s``s`ksk`k`ki`kk`k`k`ki
+
+*)
 
 
 structure UnlambdaCpsRepr : UNLAMBDA_REPR =
@@ -223,7 +238,7 @@ in
     fun selfify (U.EApp (x, y)) = ap (selfify x, selfify y)
       | selfify (U.EFunc f) = selfify_value f
 
-    fun exec count c =
+    fun exec c =
         (Output.reset();
          run (selfify c))
 end

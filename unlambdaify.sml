@@ -33,9 +33,10 @@ struct
       | lex (#"\n"::s) = lex s
       | lex _ = raise LexError
 
+    datatype function = datatype U.value
     datatype expr = EApp of (expr * expr) | EFunc of function
                   | ELambda of (ident * expr) | EVar of ident
-         and function = VK | VS | VI | VV | VC | VD | VDot of char
+
 
     fun parse l =
         let
@@ -71,7 +72,7 @@ struct
 
     fun unparse (EApp (e1, e2)) = "`" ^ (unparse e1) ^ (unparse e2)
       | unparse (ELambda (s, e)) = "^" ^ s ^ unparse e
-      | unparse (EVar s) = s
+      | unparse (EVar s) = "$" ^ s
       | unparse (EFunc f) =
         (case f
           of VK => "k" | VS => "s" | VI => "i" | VV => "v" | VC => "c"
@@ -85,12 +86,10 @@ struct
 
         fun safe_to_apply e =
             (case e of
-                 EFunc VK => true
+                 EFunc VI => true
+               | EFunc VK => true
+               | EFunc VS => true
                | EApp (EFunc VS, _) => true
-
-               (* These ones are more dodgy! *)
-               | EFunc VI => true
-               | EApp (EFunc VK, _) => true
 
                | _ => false)
 
@@ -108,7 +107,10 @@ struct
                      val (e'', xsafe, hasx) = elim x e'
                  in
                      (* XXX: or should it be xsafe??? *)
-                     (if (ysafe orelse always_safe) andalso not hasx
+                     ((*if (ysafe orelse always_safe) andalso not hasx*)
+                       (* this should always be safe, right??? *)
+                       if not hasx
+
                       then (kapp e') else e'',
                       true,
                       hasx)
@@ -128,16 +130,27 @@ struct
 
             )
 
-        val fconv =
-            (fn VK => U.VK | VS => U.VS | VI => U.VI | VV => U.VV
-              | VC => U.VC | VD => U.VD | (VDot c) => (U.VDot c))
     in
     fun convert (EApp (e1, e2)) = (U.EApp (convert e1, convert e2))
       | convert (ELambda (x, e)) =
         let val (e', _, _) = elim x e
         in convert e' end
-      | convert (EFunc f) = (U.EFunc (fconv f))
+      | convert (EFunc f) = (U.EFunc f)
       | convert (EVar s) = raise Fail ("variable: " ^ s)
+
+    fun shrink (U.EApp (e1, e2)) =
+        (case (shrink e1, shrink e2) of
+            (* ``s`kki => k *)
+            (U.EApp (
+                  U.EFunc U.VS,
+                  U.EApp (U.EFunc U.VK, U.EFunc U.VK)),
+             U.EFunc U.VI
+            ) => U.EFunc U.VK
+          | (U.EFunc U.VI, e) => e
+         | (e1', e2') => U.EApp (e1', e2'))
+      | shrink f = f
+
+
     end
 
     structure Ctx = StringDict
