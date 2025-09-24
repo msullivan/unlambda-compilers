@@ -81,15 +81,12 @@ struct
         fun go e = `(x', `(u_, %x')) $$ (e $$ unit)
         (* fun go e = (EFunc VK) $$ (e $$ unit) *)
         val (dx, dy) = ("d", "e")
-
-        val standalone_app = false
     in
+
+    val delay_prefix_app = `(dx, `(dy, `(u_, %dx $$ unit $$ %dy $$ unit)))
     fun delay (EVar k) = EVar k
       | delay (EApp (e1, e2)) =
-        if standalone_app then
-            `(dx, `(dy, `(u_, %dx $$ unit $$ %dy $$ unit))) $$ delay e1 $$ delay e2
-        else
-            `(u_, delay e1 $$ unit $$ delay e2 $$ unit)
+      `(u_, delay e1 $$ unit $$ delay e2 $$ unit)
 
       | delay (ELambda (x, e)) =
         `(u_, `(dy, `(x, delay e) $$ (go (%dy)) ))
@@ -154,14 +151,6 @@ struct
     end
 end
 
-    (*
-- println ((Unlambda.unparse (Unlambdaify.shrink (Unlambdaify.convert (Unlambdaify.load (let val p = Unlambdaify.unparse (LowerUnlambda.delay ( (Unlambdaify.load "`$x$y"))) in String.substring (p, 2, String.size p - 6) end))))));
-``s``s`ks``s``s`ks`k`ks``s``s`ks``s``s`ks`k`ks``s``s`ks``s``s`ks`k`ks``s`kkk`k`k`ki``s``s`ks`k`kk`ki`k`k`ki
-
-``s``s`ks``s`k`s`ks``s``s`ks``s`kk``s`ks``s``s`ksk`k`ki`kk`k`k`ki
-
-*)
-
 
 structure UnlambdaCpsRepr : UNLAMBDA_REPR =
 struct
@@ -217,6 +206,41 @@ struct
         end
 end
 
+structure UnlambdaToMicroUnlambda =
+struct
+local
+    structure U = Unlambda
+
+    val combs = ["s", "k", "i", "d", "c", "v", "r", ".!"]
+
+    val convert =
+        Unlambda.unparse o Unlambdaify.shrink o Unlambdaify.convert
+    val delay = (* LowerUnlambda.cps_program o*) LowerUnlambda.delay
+        o LowerUnlambda.expand_unlambda
+    val load_and_convert = convert o delay o Unlambda.load
+
+    fun get [] x = raise Fail ("missing: " ^ x)
+      | get ((k:string, v)::xs) k' =
+        if k = k' then v else get xs k'
+in
+
+val compiled =
+    ("`", "``" ^ convert LowerUnlambda.delay_prefix_app) ::
+    map (fn c => (c, load_and_convert c)) combs
+
+fun translate' [] = []
+  | translate' (#" "::xs) = translate' xs
+  | translate' (#"."::c::xs) =
+    String.translate (
+        fn c' => if c' = #"!" then str c else str c') (get compiled ".!")
+    :: translate' xs
+  | translate' (c::xs) = get compiled (str c) :: translate' xs
+
+fun translate s = "`" ^ String.concat (translate' (explode s)) ^ "i"
+
+end
+end
+
 functor UnlambdaSelfifier(R : UNLAMBDA_REPR) =
 struct
 local
@@ -244,7 +268,7 @@ in
 end
 end
 
-structure UnlambdaCompiler =
+structure UnlambdaToSMLCompiler =
 struct
 local
     structure U = Unlambda
