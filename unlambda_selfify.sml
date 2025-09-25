@@ -83,10 +83,9 @@ struct
         val (dx, dy) = ("d", "e")
     in
 
-    val delay_prefix_app = `(dx, `(dy, `(u_, %dx $$ unit $$ %dy $$ unit)))
     fun delay (EVar k) = EVar k
       | delay (EApp (e1, e2)) =
-      `(u_, delay e1 $$ unit $$ delay e2 $$ unit)
+        `(u_, delay e1 $$ unit $$ delay e2 $$ unit)
 
       | delay (ELambda (x, e)) =
         `(u_, `(dy, `(x, delay e) $$ (go (%dy)) ))
@@ -113,20 +112,6 @@ struct
             `(k, action $$ `(du, f $$ %du $$ %k))
     in
 
-    fun cps_app_case e1' e2' =
-        (* bind e1' *)
-        (*      (`(dx, *)
-        (*         bind e2' *)
-        (*              (`(dy, %dx $$ %dy)))) *)
-        (* Inline the binds *)
-        `(k,
-          e1' $$
-              (`(dx,
-                 e2' $$
-                     (`(dy, %dx $$ %dy $$ %k)))))
-
-    val cps_prefix_app = `(dx, `(dy, cps_app_case (%dx) (%dy)))
-
     fun cps_convert e =
         let
             fun cps e =
@@ -138,7 +123,16 @@ struct
                    | ELambda (x, e) => return (`(x, cps e))
                    (* Inline the binds *)
                    | EApp (e1, e2) =>
-                     cps_app_case (cps e1) (cps e2)
+                     (* bind cps e1 *)
+                     (*      (`(dx, *)
+                     (*         bind cps e2 *)
+                     (*              (`(dy, %dx $$ %dy)))) *)
+                     (* Inline the binds *)
+                     `(k,
+                       cps e1 $$
+                           (`(dx,
+                              cps e2 $$
+                                  (`(dy, %dx $$ %dy $$ %k)))))
 
                    | EFunc (VDot c) =>
                      return (`(dy, `(k, %k $$ (EFunc (VDot c) $$ %dy))))
@@ -154,7 +148,7 @@ struct
         in cps e end
 
     fun cps_program e = cps_convert e $$ EFunc VI
-    fun cps_and_delay e = cps_prefix_app $$ cps_convert (delay e) $$ cps_convert (EFunc VI) $$ EFunc VI
+    (* fun cps_and_delay e = cps_prefix_app $$ cps_convert (delay e) $$ cps_convert (EFunc VI) $$ EFunc VI *)
     end
 end
 
@@ -224,11 +218,8 @@ local
     val combs = ["s", "k", "i", "d", "c", "v", "r", ".!"]
 
     (* val maybe_cps_conv = (fn x => x) *)
-    (* val prefix_app = LowerUnlambda.delay_prefix_app *)
 
     val maybe_cps_conv = LowerUnlambda.cps_convert
-    val prefix_app = LowerUnlambda.cps_prefix_app
-
 
     val convert =
         Unlambda.unparse o Unlambdaify.shrink o Unlambdaify.convert
@@ -236,18 +227,21 @@ local
         o LowerUnlambda.expand_unlambda
     val load_and_convert = convert o delay o Unlambda.load
 
-
     (* Apply a placeholder to another one, then bind them with lambdas
      * and convert it *)
-    val prefix_app_str =
-        let val expr = maybe_cps_conv (
-                    LowerUnlambda.delay (UL.EApp (UL.EVar "N", UL.EVar "M")))
+    fun make_app_prefix_str f =
+        let val expr = f (UL.EApp (UL.EVar "N", UL.EVar "M"))
             val s = convert (UL.ELambda ("N", UL.ELambda ("M", expr)))
         in "``" ^ s end
 
+    val prefix_app_str =
+        make_app_prefix_str (maybe_cps_conv o LowerUnlambda.delay )
 
-    val cps_prefix_app = convert prefix_app
+    val cps_prefix_app = make_app_prefix_str LowerUnlambda.cps_convert
     val vi_cps = convert (LowerUnlambda.cps_convert (UL.EFunc UL.VI))
+
+    (* val (prefix, suffix) = ("`", "i") *)
+    val (prefix, suffix) = ("`" ^ cps_prefix_app, vi_cps ^ "i")
 
     fun get [] x = raise Fail ("missing: " ^ x)
       | get ((k:string, v)::xs) k' =
@@ -266,10 +260,8 @@ fun translate' [] = []
     :: translate' xs
   | translate' (c::xs) = get compiled (str c) :: translate' xs
 
-(* fun translate s = "`" ^ String.concat (translate' (explode s)) ^ "i" *)
 fun translate s =
-    "```" ^ cps_prefix_app ^ String.concat (translate' (explode s))
-    ^ vi_cps ^ "i"
+    prefix ^ String.concat (translate' (explode s)) ^ suffix
 
 end
 end
