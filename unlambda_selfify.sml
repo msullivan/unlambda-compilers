@@ -105,34 +105,40 @@ struct
         open L
 
         val unit = EFunc VI
-        val (dx, dy, df, du) = ("____dx", "____dy", "____df", "____du")
-        val k = "____k"
+        val (dx, dy, df, du) = ("dx", "dy", "df", "du")
+        val k = "k"
 
         fun return e = `(k, %k $$ e)
         fun bind action f =
             `(k, action $$ `(du, f $$ %du $$ %k))
     in
 
+    fun cps_app_case e1' e2' =
+        (* bind e1' *)
+        (*      (`(dx, *)
+        (*         bind e2' *)
+        (*              (`(dy, %dx $$ %dy)))) *)
+        (* Inline the binds *)
+        `(k,
+          e1' $$
+              (`(dx,
+                 e2' $$
+                     (`(dy, %dx $$ %dy $$ %k)))))
+
+    val cps_prefix_app = `(dx, `(dy, cps_app_case (%dx) (%dy)))
+
     fun cps_convert e =
         let
             fun cps e =
                 (case e of
-                     EVar x => return (%x)
+                     EVar x =>
+                     (* HACK: capital letters are placeholders not variables *)
+                     if x >= "A" andalso x < "[" then (%x)
+                     else return (%x)
                    | ELambda (x, e) => return (`(x, cps e))
-                     (*
-                   | EApp (e1, e2) =>
-                     bind (cps e1)
-                     (`(dx,
-                        bind (cps e2)
-                        (`(dy, %dx $$ %dy))))
-                     *)
                    (* Inline the binds *)
                    | EApp (e1, e2) =>
-                     `(k,
-                       cps e1 $$
-                       (`(dx,
-                          cps e2 $$
-                          (`(dy, %dx $$ %dy $$ %k)))))
+                     cps_app_case (cps e1) (cps e2)
 
                    | EFunc (VDot c) =>
                      return (`(dy, `(k, %k $$ (EFunc (VDot c) $$ %dy))))
@@ -148,6 +154,7 @@ struct
         in cps e end
 
     fun cps_program e = cps_convert e $$ EFunc VI
+    fun cps_and_delay e = cps_prefix_app $$ cps_convert (delay e) $$ cps_convert (EFunc VI) $$ EFunc VI
     end
 end
 
@@ -163,6 +170,8 @@ struct
         fn k: 'b cont => x (fn vx => f vx k)
 
     (* Fun fact: the CPS equivalent of `unit -> A` is `A cont cont` *)
+    (* |A -> B| = (|A| * |B| cont) cont *)
+    (* |unit -> A| = (unit * |A| cont) cont, at which point we drop the unit *)
     datatype F = F of (F * F cont) cont cont cont
     fun unF (F x) = x
     fun ap (F x, y) = F (
@@ -210,14 +219,35 @@ structure UnlambdaToMicroUnlambda =
 struct
 local
     structure U = Unlambda
+    structure UL = Unlambdaify
 
     val combs = ["s", "k", "i", "d", "c", "v", "r", ".!"]
 
+    (* val maybe_cps_conv = (fn x => x) *)
+    (* val prefix_app = LowerUnlambda.delay_prefix_app *)
+
+    val maybe_cps_conv = LowerUnlambda.cps_convert
+    val prefix_app = LowerUnlambda.cps_prefix_app
+
+
     val convert =
         Unlambda.unparse o Unlambdaify.shrink o Unlambdaify.convert
-    val delay = (* LowerUnlambda.cps_program o*) LowerUnlambda.delay
+    val delay = maybe_cps_conv o LowerUnlambda.delay
         o LowerUnlambda.expand_unlambda
     val load_and_convert = convert o delay o Unlambda.load
+
+
+    (* Apply a placeholder to another one, then bind them with lambdas
+     * and convert it *)
+    val prefix_app_str =
+        let val expr = maybe_cps_conv (
+                    LowerUnlambda.delay (UL.EApp (UL.EVar "N", UL.EVar "M")))
+            val s = convert (UL.ELambda ("N", UL.ELambda ("M", expr)))
+        in "``" ^ s end
+
+
+    val cps_prefix_app = convert prefix_app
+    val vi_cps = convert (LowerUnlambda.cps_convert (UL.EFunc UL.VI))
 
     fun get [] x = raise Fail ("missing: " ^ x)
       | get ((k:string, v)::xs) k' =
@@ -225,7 +255,7 @@ local
 in
 
 val compiled =
-    ("`", "``" ^ convert LowerUnlambda.delay_prefix_app) ::
+    ("`", prefix_app_str) ::
     map (fn c => (c, load_and_convert c)) combs
 
 fun translate' [] = []
@@ -236,7 +266,10 @@ fun translate' [] = []
     :: translate' xs
   | translate' (c::xs) = get compiled (str c) :: translate' xs
 
-fun translate s = "`" ^ String.concat (translate' (explode s)) ^ "i"
+(* fun translate s = "`" ^ String.concat (translate' (explode s)) ^ "i" *)
+fun translate s =
+    "```" ^ cps_prefix_app ^ String.concat (translate' (explode s))
+    ^ vi_cps ^ "i"
 
 end
 end
