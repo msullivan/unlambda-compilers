@@ -39,7 +39,7 @@ struct
     val ul_C = G (
             fn x =>
                CC.callcc (fn k => x $$ G (fn y => CC.throw k y)))
-    val ul_D = F (fn () => fn x => F (fn () => fn y => x $$ y))
+    val ul_D = F (fn () => fn x => F (fn () => fn y => x $$ (go y)))
 
     val run = ignore o go
 end
@@ -93,7 +93,7 @@ struct
         `(u_, `(dy, `(x, delay e) $$ (go (%dy)) ))
 
       | delay (EFunc VD) =
-        `(u_, `(dx, `(u_, `(dy, `(u_, %dx $$ unit $$ %dy $$ unit)))))
+        `(u_, `(dx, `(u_, `(dy, `(u_, %dx $$ unit $$ (go (%dy)) $$ unit)))))
       (* XXX: is this needed? oh, probably, since we need to delay the cont *)
       | delay (EFunc VC) =
         `(u_, `(x, L.EFunc L.VC $$ `(y, %x $$ unit $$ `(u_, %y))))
@@ -147,7 +147,8 @@ struct
                    (* | EFunc VI => return e *)
                    (* The point of all this *)
                    | EFunc VC =>
-                     return (`(df, `(k, %df $$ `(dy, `(u_, %k $$ %dy)) $$ %k)))
+                     (* return (`(df, `(k, %df $$ `(dy, `(u_, %k $$ %dy)) $$ %k))) *)
+                     return (`(df, `(k, %df $$ %k $$ %k)))
 
                    | (e as EFunc _) =>
                      raise Fail ("func unsupported in cps" ^ unparse e)
@@ -208,7 +209,8 @@ struct
 
 
     val ul_D = F (return (fn (x, k) =>
-                             k (F (return (fn (y, k') => k' (x $$ y))))))
+                             k (F (return (fn (y, k') =>
+                                              go y (fn y' => k' (x $$ y')))))))
 
     fun run (F x) =
         let exception Done
