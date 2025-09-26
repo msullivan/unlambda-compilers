@@ -67,7 +67,7 @@ struct
            (* | U.VD => L.EFunc L.VD *)
            (* XXX: do we need either of these? must explain why *)
            (* if VDot isn't expanded, we print backward??? *)
-           | (U.VDot c) => `(x, (L.EFunc (L.VDot c) $$ %x))
+           (* | (U.VDot c) => `(x, (L.EFunc (L.VDot c) $$ %x)) *)
            (* | (U.VC) => `(x, L.EFunc L.VC $$ %x) *)
            | v => L.EFunc v
         )
@@ -75,9 +75,11 @@ struct
         L.EApp (expand_unlambda e1, expand_unlambda e2)
       | expand_unlambda (U.EFunc v) = expand_unlambda_value v
 
+    (* val unit = EFunc VI *)
+    val unit = `(x', %x')
+
     local
         open L
-        val unit = EFunc VI
         fun go e = `(x', `(u_, %x')) $$ (e $$ unit)
         (* fun go e = (EFunc VK) $$ (e $$ unit) *)
         val (dx, dy) = ("d", "e")
@@ -95,7 +97,12 @@ struct
       (* XXX: is this needed? oh, probably, since we need to delay the cont *)
       | delay (EFunc VC) =
         `(u_, `(x, L.EFunc L.VC $$ `(y, %x $$ unit $$ `(u_, %y))))
-      | delay (EFunc v) = `(u_, EFunc v)
+
+      (* Note that we need to force the RHS *)
+      (* We could also have accomplished this by eta-expanding in expand_unlambda *)
+      | delay (e as (EFunc (VDot _))) = `(u_, `(dy, e $$ (go (%dy))))
+
+      | delay e = raise Fail ("unexpanded combinator " ^ L.unparse e)
 
     fun delay_program e = delay e $$ unit
     end
@@ -103,7 +110,6 @@ struct
     local
         open L
 
-        val unit = EFunc VI
         val (dx, dy, df, du) = ("dx", "dy", "df", "du")
         val k = "k"
 
@@ -137,17 +143,19 @@ struct
                    | EFunc (VDot c) =>
                      return (`(dy, `(k, %k $$ (EFunc (VDot c) $$ %dy))))
 
-                   (* We support this one just for its use as unit *)
-                   | EFunc VI => return e
+                   (* (* We support this one just for its use as unit *) *)
+                   (* | EFunc VI => return e *)
                    (* The point of all this *)
                    | EFunc VC =>
                      return (`(df, `(k, %df $$ `(dy, `(u_, %k $$ %dy)) $$ %k)))
-                   | EFunc _ => raise Fail "func unsupported in cps"
+
+                   | (e as EFunc _) =>
+                     raise Fail ("func unsupported in cps" ^ unparse e)
                 )
 
         in cps e end
 
-    fun cps_program e = cps_convert e $$ EFunc VI
+    fun cps_program e = cps_convert e $$ unit
     (* fun cps_and_delay e = cps_prefix_app $$ cps_convert (delay e) $$ cps_convert (EFunc VI) $$ EFunc VI *)
     end
 end
@@ -238,7 +246,7 @@ local
         make_app_prefix_str (maybe_cps_conv o LowerUnlambda.delay )
 
     val cps_prefix_app = make_app_prefix_str LowerUnlambda.cps_convert
-    val vi_cps = convert (LowerUnlambda.cps_convert (UL.EFunc UL.VI))
+    val vi_cps = convert (LowerUnlambda.cps_convert LowerUnlambda.unit)
 
     (* val (prefix, suffix) = ("`", "i") *)
     val (prefix, suffix) = ("`" ^ cps_prefix_app, vi_cps ^ "i")

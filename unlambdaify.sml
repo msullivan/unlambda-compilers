@@ -146,6 +146,10 @@ struct
                   U.EApp (U.EFunc U.VK, U.EFunc U.VK)),
              U.EFunc U.VI
             ) => U.EFunc U.VK
+          (* ``skX => i *)
+          | ((U.EApp (U.EFunc U.VS, U.EFunc U.VK),
+              U.EFunc _)
+            ) => U.EFunc U.VI
           | (U.EFunc U.VI, e) => e
          | (e1', e2') => U.EApp (e1', e2'))
       | shrink f = f
