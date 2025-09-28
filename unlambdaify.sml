@@ -4,7 +4,16 @@ structure StringDict = SplayMapFn(
         val compare = String.compare
     end)
 
-structure Unlambdaify =
+structure UnlambdaifySyntax =
+struct
+    type ident = string
+    datatype function = datatype Unlambda.value
+    datatype expr = EApp of (expr * expr) | EFunc of function
+                  | ELambda of (ident * expr) | EVar of ident
+
+end
+
+functor UnlambdaifyFn(val strict : bool) =
 struct
     exception LexError
     exception ParseError of string
@@ -33,10 +42,8 @@ struct
       | lex (#"\n"::s) = lex s
       | lex _ = raise LexError
 
-    datatype function = datatype U.value
-    datatype expr = EApp of (expr * expr) | EFunc of function
-                  | ELambda of (ident * expr) | EVar of ident
-
+    datatype function = datatype UnlambdaifySyntax.function
+    datatype expr = datatype UnlambdaifySyntax.expr
 
     fun parse l =
         let
@@ -93,7 +100,7 @@ struct
 
                | _ => false)
 
-        val always_safe = false
+        val always_safe = not strict
 
         fun elim x e =
             (case e of
@@ -200,3 +207,6 @@ struct
     val stransform = (U.unparse o transform)
     val exec = (UnlambdaInterp.eval o transform)
 end
+
+structure Unlambdaify = UnlambdaifyFn(val strict = true)
+structure UnlambdaifyLazy = UnlambdaifyFn(val strict = false)
