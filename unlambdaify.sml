@@ -171,14 +171,14 @@ struct
     fun unRFun (RFun f) = f
       | unRFun RDelay = fn z => z
 
-    fun eval_func f =
+    fun eval_func out f =
         (case f of
              VI => RFun (fn x => x)
            | VK => RFun (fn x => RFun (fn _ => x))
            | VS => RFun (fn x => RFun (fn y => RFun (fn z =>
                      unRFun (unRFun x z) (unRFun y z))))
-           | VV => RFun (fn _ => eval_func VV)
-           | VDot c => RFun (fn x => (Output.putc c; x))
+           | VV => RFun (fn _ => eval_func out VV)
+           | VDot c => RFun (fn x => (out c; x))
            | VD => RDelay
            | VC => RFun (
                       fn x =>
@@ -187,25 +187,29 @@ struct
         )
 
 
-    fun eval env e =
+    fun eval out env e =
         (case e of
              EVar v => valOf (Ctx.find (env, v))
            | EApp (e1, e2) =>
-             (case eval env e1 of
-                  RFun f1 => f1 (eval env e2)
-                | RDelay => RFun (fn r => unRFun (eval env e2) r))
+             (case eval out env e1 of
+                  RFun f1 => f1 (eval out env e2)
+                | RDelay => RFun (fn r => unRFun (eval out env e2) r))
            | ELambda (v, e) =>
-             RFun (fn r => eval (Ctx.insert (env, v, r)) e)
-           | EFunc k => eval_func k
+             RFun (fn r => eval out (Ctx.insert (env, v, r)) e)
+           | EFunc k => eval_func out k
         )
 
-    val evalTop = eval Ctx.empty
+    (* val evalTop = eval Ctx.empty *)
 
     val load = (parse o lex o explode)
-    val exec' = evalTop o load
+    (* val exec' = evalTop o load *)
     val transform = (convert o load)
-    val stransform = (U.unparse o transform)
-    val exec = (UnlambdaInterp.eval o transform)
+    (* val stransform = (U.unparse o transform) *)
+    (* val exec = (UnlambdaInterp.eval o transform) *)
+
+    val eval' = eval
+    fun eval_with_output out e = eval' out Ctx.empty e
+    fun eval e = eval_with_output (Output.int_output Output.putc) e
 end
 
 structure Unlambdaify = UnlambdaifyFn(val strict = true)

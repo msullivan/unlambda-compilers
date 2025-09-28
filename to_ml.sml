@@ -6,7 +6,7 @@ signature UNLAMBDA_REPR =
     val ul_K : F
     val ul_S : F
     val ul_V : F
-    val ul_Dot : char -> F
+    val ul_Dot : (char -> unit) -> char -> F
     val ul_C : F
     val ul_D : F
     val run : F -> unit
@@ -35,7 +35,7 @@ struct
     val ul_S = G (fn x => G (fn y => G (fn z => (x $$ z) $$ (y $$ z))))
     fun ul_V' _ = G (ul_V')
     val ul_V = G (ul_V')
-    fun ul_Dot c = G (fn x => (Output.putc c; x))
+    fun ul_Dot out c = G (fn x => (out c; x))
     val ul_C = G (
             fn x =>
                CC.callcc (fn k => x $$ G (fn y => CC.throw k y)))
@@ -85,7 +85,7 @@ struct
 
     fun ul_V' (_, k') = k' (G (ul_V'))
     val ul_V = G (ul_V')
-    fun ul_Dot c = G (fn (x, k) => (Output.putc c; k x))
+    fun ul_Dot out c = G (fn (x, k) => (out c; k x))
     val ul_C = F (return
             (fn (x, k) =>
                 k (x $$ F (return (fn (y, _) => k y)))))
@@ -112,21 +112,20 @@ in
     (* An unlambda "compiler" *)
     (* We could also output source code instead of just
      * constructing the objects, which we do below *)
-    fun selfify_value v = (
+    fun selfify_value out v = (
         case v of
            U.VI => ul_I
          | U.VK => ul_K
          | U.VS => ul_S
          | U.VV => ul_V
-         | U.VDot c => ul_Dot c
+         | U.VDot c => ul_Dot out c
          | U.VC => ul_C
          | U.VD => ul_D)
-    fun selfify (U.EApp (x, y)) = ap (selfify x, selfify y)
-      | selfify (U.EFunc f) = selfify_value f
+    fun selfify out (U.EApp (x, y)) = ap (selfify out x, selfify out y)
+      | selfify out (U.EFunc f) = selfify_value out f
 
-    fun exec c =
-        (Output.reset();
-         run (selfify c))
+    fun eval_with_output out c = run (selfify out c)
+    fun eval c = eval_with_output (Output.int_output Output.putc) c
 end
 end
 
@@ -142,7 +141,7 @@ in
          | U.VK => "K"
          | U.VS => "S"
          | U.VV => "V"
-         | U.VDot c => "Dot #\"" ^ Char.toString c ^ "\""
+         | U.VDot c => "Dot Output.putc #\"" ^ Char.toString c ^ "\""
          | U.VC => "C"
          | U.VD => "D")
     fun compile' (U.EApp (x, y)) = "ap (" ^ compile' x ^ ", " ^ compile' y ^ ")"

@@ -83,32 +83,31 @@ struct
     fun convert (U.EApp (e1, e2)) = EApp (convert e1, convert e2)
       | convert (U.EFunc v) = EFunc (convert_value v)
 
-    fun eval (EApp (e1, e2)) =
+    fun eval out (EApp (e1, e2)) =
         let
-            val v1 = eval e1
+            val v1 = eval out e1
         in
             case v1 of VD => (VPromise e2)
-                     | _ => (apply (v1, eval e2))
+                     | _ => (apply out (v1, eval out e2))
         end
-      | eval (EFunc f) = f
-    and apply (VK, x) = VK1 x
-      | apply (VK1 x, y) = x
-      | apply (VS, x) = VS1 x
-      | apply (VS1 x, y) = VS2 (x, y)
-      | apply (VS2 (x, y), z) =
-        apply(apply(x, z), apply(y, z))
-      | apply (VI, x) = x
-      | apply (VV, _) = VV
-      | apply (VDot c, x) = (Output.putc c; x)
-      | apply (VC, x) =
-        CC.callcc (fn cont => apply (x, VCont cont))
-      | apply (VCont cont, x) = CC.throw cont x
-      | apply (VD, x) = VPromise (EFunc x)
-      | apply (VPromise eg, h) = (apply (eval eg, h))
+      | eval _ (EFunc f) = f
+    and apply _ (VK, x) = VK1 x
+      | apply _ (VK1 x, y) = x
+      | apply _ (VS, x) = VS1 x
+      | apply _ (VS1 x, y) = VS2 (x, y)
+      | apply out (VS2 (x, y), z) =
+        apply out (apply out (x, z), apply out (y, z))
+      | apply _ (VI, x) = x
+      | apply _ (VV, _) = VV
+      | apply out (VDot c, x) = (out c; x)
+      | apply out (VC, x) =
+        CC.callcc (fn cont => apply out (x, VCont cont))
+      | apply _ (VCont cont, x) = CC.throw cont x
+      | apply _ (VD, x) = VPromise (EFunc x)
+      | apply out (VPromise eg, h) = (apply out (eval out eg, h))
 
 
     val eval' = eval
-    fun eval e = (Output.reset();
-                  eval' (convert e))
-    val exec = eval o Unlambda.load
+    fun eval_with_output out e = eval' out (convert e)
+    fun eval e = eval_with_output (Output.int_output Output.putc) e
 end
