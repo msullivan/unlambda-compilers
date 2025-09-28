@@ -8,5 +8,6 @@ Group is
     lambda.lex
     lambda.grm
     lambda.sml
+    to_ml.sml
     test.sml
     output.sml
