@@ -45,7 +45,7 @@ struct
 end
 
 
-structure UnlambdaCpsRepr (*: UNLAMBDA_REPR*) =
+structure UnlambdaCpsRepr : UNLAMBDA_REPR =
 struct
     datatype bot = Bot of bot
     fun abort (Bot x) = abort x
@@ -72,8 +72,7 @@ struct
 
     fun go (F x) k = x (fn k' => k (F (return k')))
     fun G (f: (F * F cont) cont) : F =
-        F (fn k: (F * F cont) cont cont =>
-              k (fn (x, k''): (F * F cont) => go x (fn xv => f (xv, k''))))
+        F (return (fn (x, k''): (F * F cont) => go x (fn xv => f (xv, k''))))
 
 
     (* Direct implementations of unlambda stuff *)
