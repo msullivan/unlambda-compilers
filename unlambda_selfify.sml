@@ -104,11 +104,19 @@ struct
                    (* | EFunc VI => return e *)
                    (* The point of all this *)
                    | EFunc VC =>
-                     (* return (`(df, `(k, %df $$ `(dy, `(u_, %k $$ %dy)) $$ %k))) *)
-                     return (`(df, `(k, %df $$ %k $$ %k)))
+                     (* This was my original implementation; it seems wrong
+                      * but I can't write a test case that breaks it??? *)
+                     (* Actually now I understand why this one works --
+                      * the unwrapping is to turn k into a
+                      * (term -> cont -> term) function...
+                      * So now I don't totally understand why the other one
+                      * works... *)
+                     return (`(df, `(k, %df $$ `(dy, `(u_, %k $$ %dy)) $$ %k)))
+
+                     (* return (`(df, `(k, %df $$ %k $$ %k))) *)
 
                    | (e as EFunc _) =>
-                     raise Fail ("func unsupported in cps" ^ unparse e)
+                     raise Fail ("func unsupported in cps " ^ unparse e)
                 )
 
         in cps e end

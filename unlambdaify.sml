@@ -204,7 +204,7 @@ struct
     val load = (parse o lex o explode)
     (* val exec' = evalTop o load *)
     val transform = (convert o load)
-    (* val stransform = (U.unparse o transform) *)
+    val stransform = (U.unparse o transform)
     (* val exec = (UnlambdaInterp.eval o transform) *)
 
     val eval' = eval

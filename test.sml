@@ -58,6 +58,8 @@ struct
             val () = print (check expected res ^ "\n")
         in () end
 
+    val ite = "``s`kc``s`k`s`k`k`ki``ss`k`kk"
+
     val tests = [
         (
           "d1",
@@ -73,6 +75,41 @@ struct
           "d3",
           "` ` `dd `.Bi `.Ai",
           "BA"
+        ),
+        (
+          "c1",
+          "````" ^ ite ^ "i.T.Fi",
+          "T"
+        ),
+        (
+          "c2",
+          "````" ^ ite ^ "v.T.Fi",
+          "F"
+        ),
+        (
+          "c3",
+          UY.stransform "``c ^k`$k.A i",
+          "A"
+        ),
+        (
+          "c3'",
+          UY.stransform "``c ^k``$k.A`.Bi i",
+          "A"
+        ),
+        (
+          "c3''",
+          UY.stransform "```c ^k``$k.A`.Bi .Ci",
+          "AC"
+        ),
+        (
+          "c3'''",
+          UY.stransform "````i c ^k``$k.A`.Bi .Ci",
+          "AC"
+        ),
+        (
+          "c4",
+          UY.stransform "``c ^k.A i",
+          "A"
         ),
 
         (
@@ -108,7 +145,7 @@ struct
         ("basic", i2 o UnlambdaInterp.eval_with_output o Unlambda.load),
         (
           "lambda",
-          i2 o Unlambdaify.eval_with_output o (*LowerUnlambda.cps_program o*) LowerUnlambda.delay_program o LowerUnlambda.expand_unlambda o Unlambda.load
+          i2 o Unlambdaify.eval_with_output o LowerUnlambda.cps_program o LowerUnlambda.delay_program o LowerUnlambda.expand_unlambda o Unlambda.load
         ),
         ("micro-unlambda", i2 o UnlambdaInterp.eval_with_output o Unlambda.load o UnlambdaToMicroUnlambda.translate),
         ("SML call/cc", i2 o UnlambdaCallcc.eval_with_output o Unlambda.load),
