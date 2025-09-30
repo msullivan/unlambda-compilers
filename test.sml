@@ -10,7 +10,15 @@ struct
     val PR = "^n`r``$n.*i"
     fun ntest s = (UnlambdaInterp.eval (UY.convert ((mix PR s))))
 
+    fun run_captured f e =
+        let
+            val (get, putc) = Output.captured_int_output (SOME 10)
+            val () = (ignore (f e putc) handle Output.Done => ())
+        in get () end
 
+    fun run_print_captured f e = print (run_captured f e)
+
+    fun lines s = String.concatWith "\n" s ^ "\n"
 
     val fibo = "```s``s``sii`ki  `k.*``s``s`ks" ^
                "``s`k`s`ks``s``s`ks``s`k`s`kr``s`k`sikk" ^
@@ -35,38 +43,80 @@ struct
         "``s`k.a``s`k.d``s`k.b``s`k.m``s`k.a``s`k.l``s`k.n`k.U" ^
         "i"
 
+    (* Huh, it's missing the leading U!! *)
+    val trivial_result = "nlambda, c'est trivial!\nUnlambda, c'est trivial!\nUnlambda, c'est trivial!\nUnlambda, c'est trivial!\nUnlambda, c'est trivial!\nUnlambda, c'est trivial!\nUnlambda, c'est trivial!\nUnlambda, c'est trivial!\nUnlambda, c'est trivial!\nUnlambda, c'est trivial!\n"
 
-    val N0 = "(^sz.z)"
-    val S = "(^wyx.y(wyx))"
-    val N1 = "(" ^ S ^ N0 ^ ")"
-    val N2 = "(" ^ S ^ N1 ^ ")"
-    val N3 = "(" ^ S ^ N2 ^ ")"
+    fun check expected actual =
+        if expected = actual then "OK" else (
+            "ERROR:\nExpected:\n" ^ expected ^ "\nActual:\n" ^ actual
+        )
 
-    val ADDN = "(^mn.m"^S^"n)"
-    val MULTN = "(^xyz.x(yz)"
+    fun run_test (fname, func) (tname, prog, expected) =
+        let
+            val () = print (fname ^ ", " ^ tname ^ ": ")
+            val res = run_captured func prog
+            val () = print (check expected res ^ "\n")
+        in () end
 
-    val T = "(^xy.x)"
-    val F = "(^xy.y)"
+    val tests = [
+        (
+          "d1",
+          "` ` d `.Bi `.Ai",
+          "AB"
+        ),
+        (
+          "d2",
+          "` ` `id `.Bi `.Ai",
+          "AB"
+        ),
+        (
+          "d3",
+          "` ` `dd `.Bi `.Ai",
+          "BA"
+        ),
 
-    val AND = "(^xy.xy"^F^")"
-    val OR = "(^xy.x"^T^"y)"
-    val NOT = "(^x.x"^F^T^")"
+        (
+          "fibo",
+          fibo,
+          "\n" ^ (lines o map Int.toString) [1, 1, 2, 3, 5, 8, 13, 21, 34]
+        ),
+        (
+          "count2",
+          count2,
+          "\n" ^ (lines o map Int.toString) [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        ),
+        (
+          "trivial",
+          trivial1,
+          trivial_result
+        ),
+        (
+          "trivial2",
+          trivial2,
+          trivial_result
+        ),
+        (
+          "trivial3",
+          trivial3,
+          trivial_result
+        )
+    ]
 
-    val Z = concat [ "(^x.x", F, NOT, F, ")" ]
+    fun i2 f x = ignore (f x)
 
-    val PHI = "(^pz.z("^S^"(p"^T^"))(p"^T^"))"
+    val impls = [
+        ("basic", i2 o UnlambdaInterp.eval_with_output o Unlambda.load),
+        (
+          "lambda",
+          i2 o Unlambdaify.eval_with_output o (*LowerUnlambda.cps_program o*) LowerUnlambda.delay_program o LowerUnlambda.expand_unlambda o Unlambda.load
+        ),
+        ("micro-unlambda", i2 o UnlambdaInterp.eval_with_output o Unlambda.load o UnlambdaToMicroUnlambda.translate),
+        ("SML call/cc", i2 o UnlambdaCallcc.eval_with_output o Unlambda.load),
+        ("SML cps", i2 o UnlambdaCps.eval_with_output o Unlambda.load)
 
-    val P = "(^n.n"^PHI^"(^z.z"^N0^N0^")"^F^")"
+    ]
 
-    (* val P = "(^n.n<PHI>(^z.z<NO><NO>)<F>)" *)
-
-    val G = "(^xy."^Z^"(x"^P^"y))"
-    val E = "(^xy."^AND^"("^Z^"(x"^P^"y))"^"("^Z^"(y"^P^"x)))"
-
-    val Y = "(^y.(^x.y(xx))(^x.y(xx)))"
-
-    val B2N = "(^p.p"^N1^N0^")"
-
-    val SUM = "("^Y^"(^rn."^Z^"n"^N0^"(n"^S^"(r("^P^"n)))))"
+    fun run_tests () =
+        List.app (fn impl => List.app (run_test impl) tests) impls
 
 end

@@ -124,8 +124,8 @@ in
     fun selfify out (U.EApp (x, y)) = ap (selfify out x, selfify out y)
       | selfify out (U.EFunc f) = selfify_value out f
 
-    fun eval_with_output out c = run (selfify out c)
-    fun eval c = eval_with_output (Output.int_output Output.putc) c
+    fun eval_with_output c out = run (selfify out c)
+    fun eval c = eval_with_output c (Output.int_output Output.putc)
 end
 end
 

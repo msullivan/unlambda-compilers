@@ -108,6 +108,6 @@ struct
 
 
     val eval' = eval
-    fun eval_with_output out e = eval' out (convert e)
-    fun eval e = eval_with_output (Output.int_output Output.putc) e
+    fun eval_with_output e (out : char -> unit) = eval' out (convert e)
+    fun eval e = eval_with_output e (Output.int_output Output.putc)
 end
