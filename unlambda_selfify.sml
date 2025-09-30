@@ -47,7 +47,10 @@ struct
         `(u_, `(dy, `(x, delay e) $$ (go (%dy)) ))
 
       | delay (EFunc VD) =
-        `(u_, `(dx, `(u_, `(dy, `(u_, %dx $$ unit $$ (go (%dy)) $$ unit)))))
+        `(u_, `(dx, `(u_, `(dy, `(u_,
+                                  `(dy, %dx $$ unit $$ %dy $$ unit)
+                                   $$ go (%dy)
+         )))))
       (* XXX: is this needed? oh, probably, since we need to delay the cont *)
       | delay (EFunc VC) =
         `(u_, `(x, L.EFunc L.VC $$ `(y, %x $$ unit $$ `(u_, %y))))
