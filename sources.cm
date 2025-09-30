@@ -11,3 +11,4 @@ Group is
     to_ml.sml
     test.sml
     output.sml
+    lazyk.sml

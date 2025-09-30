@@ -53,6 +53,7 @@ struct
 
     fun run_test (fname, func) (tname, prog, expected) =
         let
+            (* val () = print (prog ^ "\n") *)
             val () = print (fname ^ ", " ^ tname ^ ": ")
             val res = run_captured func prog
             val () = print (check expected res ^ "\n")
@@ -148,6 +149,12 @@ struct
           i2 o Unlambdaify.eval_with_output o LowerUnlambda.cps_program o LowerUnlambda.delay_program o LowerUnlambda.expand_unlambda o Unlambda.load
         ),
         ("micro-unlambda", i2 o UnlambdaInterp.eval_with_output o Unlambda.load o UnlambdaToMicroUnlambda.translate),
+
+        (
+          "lazyk",
+          i2 o LazyK.runComb o LazyK.convExp o LazyK.parseExp o Unlambda.unparse o UnlambdaifyLazy.convert o LowerUnlambda.cps_program_lazyk o LowerUnlambda.delay_program o LowerUnlambda.expand_unlambda o Unlambda.load
+        ),
+
         ("SML call/cc", i2 o UnlambdaCallcc.eval_with_output o Unlambda.load),
         ("SML cps", i2 o UnlambdaCps.eval_with_output o Unlambda.load)
 

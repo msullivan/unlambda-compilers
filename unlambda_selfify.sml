@@ -66,6 +66,22 @@ struct
 
     local
         open L
+        val S = EFunc VS
+        val K = EFunc VK
+        val I = EFunc VI
+        fun iterate 0 _ x = []
+          | iterate n f x = x :: iterate (n-1) f (f x)
+    in
+    fun cons x xs = S $$ (S $$ I $$ (K $$ x)) $$ (K $$ xs)
+    fun churchIncrement c = S $$ (S $$ (K $$ S) $$ K) $$ c
+
+    (* TODO: we could have a table of more compact numerals *)
+    val churchNumeralTable = Vector.fromList (iterate 257 churchIncrement (K $$ I))
+
+    end
+
+    local
+        open L
 
         val (dx, dy, df, du) = ("dx", "dy", "df", "du")
         val k = "k"
@@ -75,7 +91,7 @@ struct
             `(k, action $$ `(du, f $$ %du $$ %k))
     in
 
-    fun cps_convert e =
+    fun cps_convert' is_lazyk e =
         let
             fun cps e =
                 (case e of
@@ -86,9 +102,9 @@ struct
                    | ELambda (x, e) => return (`(x, cps e))
                    (* Inline the binds *)
                    | EApp (e1, e2) =>
-                     (* bind cps e1 *)
+                     (* bind (cps e1) *)
                      (*      (`(dx, *)
-                     (*         bind cps e2 *)
+                     (*         bind (cps e2) *)
                      (*              (`(dy, %dx $$ %dy)))) *)
                      (* Inline the binds *)
                      `(k,
@@ -98,7 +114,14 @@ struct
                                   (`(dy, %dx $$ %dy $$ %k)))))
 
                    | EFunc (VDot c) =>
-                     return (`(dy, `(k, %k $$ (EFunc (VDot c) $$ %dy))))
+                     if is_lazyk then
+                         return (`(dy, `(k,
+                                         cons
+                                             (Vector.sub (churchNumeralTable, ord c))
+                                             (%k $$ %dy)
+                         )))
+                     else
+                         return (`(dy, `(k, %k $$ (EFunc (VDot c) $$ %dy))))
 
                    (* (* We support this one just for its use as unit *) *)
                    (* | EFunc VI => return e *)
@@ -121,7 +144,16 @@ struct
 
         in cps e end
 
+    val cps_convert = cps_convert' false
+
     fun cps_program e = cps_convert e $$ unit
+    fun cps_program_lazyk e =
+        EFunc VK $$
+              (cps_convert' true e $$
+                            (* final continuation outputs 256 *)
+                            `(u_,
+                              cons (Vector.sub (churchNumeralTable, 256)) unit))
+
     (* fun cps_and_delay e = cps_prefix_app $$ cps_convert (delay e) $$ cps_convert (EFunc VI) $$ EFunc VI *)
     end
 end

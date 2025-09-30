@@ -95,20 +95,23 @@ struct
         SOME char => ord char
       | NONE => 256
 
-  fun inputStream' () =
+  fun inputStream' getc =
       % (
           fn () =>
-             let val c = readChar ()
-             in T.force (cons (getChurchNumeral c) (inputStream' ())) end
+             let val c = getc ()
+             in T.force (cons (getChurchNumeral c) (inputStream' getc)) end
       )
 
-  fun runComb e putc =
+  fun runComb' e putc =
       let
           val hd = fromChurchNumeral (car e)
+          (* val _ = print ("!! " ^ Int.toString hd ^"\n") *)
       in
-          if hd < 256 then (putc (chr hd); runComb (cdr e) putc)
+          if hd < 256 then (putc (chr hd); runComb' (cdr e) putc)
           else hd - 256
       end
+  (* TODO: getc configurable!! *)
+  fun runComb e putc = runComb' (e $$ inputStream' readChar) putc
 
   (* parser *)
   datatype expr = EI | EK | ES | EApp of expr * expr
@@ -141,7 +144,7 @@ struct
 
   fun runFile s =
       let val c = convExp (parseFile s)
-          val c' = c $$ (inputStream' ())
+          val c' = c $$ (inputStream' readChar)
       in runComb c' Output.putc end
 
 end
