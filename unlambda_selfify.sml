@@ -202,12 +202,30 @@ val compiled =
     ("`", prefix_app_str) ::
     map (fn c => (c, load_and_convert c)) combs
 
+fun print_table' table =
+    List.app
+        (fn (c, s) => if c = "r" then () else print (c ^ "\t" ^ Int.toString (String.size s) ^ "\n"))
+        table
+fun print_table () = print_table' compiled
+
+
+fun skip_line nil = nil
+  | skip_line (#"\n"::s) = s
+  | skip_line (_::s) = skip_line s
+
 fun translate' [] = []
+  (* Annoying lexing stuff *)
   | translate' (#" "::xs) = translate' xs
+  | translate' (#"\t"::xs) = translate' xs
+  | translate' (#"\n"::xs) = translate' xs
+  | translate' (#"#"::xs) = translate' (skip_line xs)
+
+  (* .<X> - use .!, and replace any !s with <X> *)
   | translate' (#"."::c::xs) =
     String.translate (
         fn c' => if c' = #"!" then str c else str c') (get compiled ".!")
     :: translate' xs
+  (* Main case - just lookup the combinator *)
   | translate' (c::xs) = get compiled (str c) :: translate' xs
 
 fun translate s =
