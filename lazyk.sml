@@ -110,8 +110,8 @@ struct
           if hd < 256 then (putc (chr hd); runComb' (cdr e) putc)
           else hd - 256
       end
-  (* TODO: getc configurable!! *)
-  fun runComb e putc = runComb' (e $$ inputStream' readChar) putc
+  fun runComb e getc putc = runComb' (e $$ inputStream' getc) putc
+  fun runCombNoInput e = runComb e (fn () => 256)
 
   (* parser *)
   datatype expr = EI | EK | ES | EApp of expr * expr
@@ -144,14 +144,6 @@ struct
 
   fun runFile s =
       let val c = convExp (parseFile s)
-          val c' = c $$ (inputStream' readChar)
-      in runComb c' Output.putc end
+      in runComb c readChar Output.putc end
 
-end
-
-structure Run =
-struct
-  val () = (case CommandLine.arguments () of
-                s::_ => (LazyK.runFile s; ())
-              | _ => ())
 end

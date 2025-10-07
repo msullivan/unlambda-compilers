@@ -3,6 +3,7 @@ struct
     exception Done
 
     fun putc c = print (str c)
+    (* fun putc c = TextIO.output1 (TextIO.stdOut, c) *)
     fun puts f s = List.app f (explode s)
 
     fun int_output putc =

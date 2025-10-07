@@ -153,7 +153,7 @@ struct
 
         (
           "lazyk",
-          i2 o LazyK.runComb o LazyK.convExp o LazyK.parseExp o Unlambda.unparse o UnlambdaifyLazy.convert o LowerUnlambda.cps_program_lazyk o LowerUnlambda.delay_program o LowerUnlambda.expand_unlambda o Unlambda.load
+          i2 o LazyK.runCombNoInput o LazyK.convExp o LazyK.parseExp o Unlambda.unparse o UnlambdaifyLazy.convert o LowerUnlambda.cps_program_lazyk o LowerUnlambda.delay_program o LowerUnlambda.expand_unlambda o Unlambda.load
         ),
 
         ("SML call/cc", i2 o UnlambdaCallcc.eval_with_output o Unlambda.load),
