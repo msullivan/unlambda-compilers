@@ -10,11 +10,12 @@ struct
     val PR = "^n`r``$n.*i"
     fun ntest s = (UnlambdaInterp.eval (UY.convert ((mix PR s))))
 
-    fun run_captured f e =
+    fun run_captured' f e limit =
         let
-            val (get, putc) = Output.captured_int_output (SOME 10)
+            val (get, putc) = Output.captured_int_output limit
             val () = (ignore (f e putc) handle Output.Done => ())
         in get () end
+    fun run_captured f e = run_captured' f e (SOME 10)
 
     fun run_print_captured f e = print (run_captured f e)
 
@@ -162,5 +163,11 @@ struct
 
     fun run_tests () =
         List.app (fn impl => List.app (run_test impl) tests) impls
+
+    fun run_timed f =
+        let val t0 = Time.now ()
+            val x = f ()
+            val t1 = Time.now ()
+        in (Time.toReal (Time.- (t1, t0)), x) end
 
 end

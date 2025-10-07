@@ -172,7 +172,9 @@ local
     val maybe_cps_conv = LowerUnlambda.cps_convert
 
     val convert =
-        Unlambda.unparse o Unlambdaify.shrink o Unlambdaify.convert
+        Unlambda.unparse
+        (* o Unlambdaify.remove_is  (* do we really want this?? *) *)
+        o Unlambdaify.shrink o Unlambdaify.convert
     val delay = maybe_cps_conv o LowerUnlambda.delay
         o LowerUnlambda.expand_unlambda
     val load_and_convert = convert o delay o Unlambda.load
@@ -202,11 +204,12 @@ val compiled =
     ("`", prefix_app_str) ::
     map (fn c => (c, load_and_convert c)) combs
 
-fun print_table' table =
+fun print_table' f table =
     List.app
-        (fn (c, s) => if c = "r" then () else print (c ^ "\t" ^ Int.toString (String.size s) ^ "\n"))
+        (fn (c, s) => if c = "r" then () else print (c ^ "\t" ^ f s ^ "\n"))
         table
-fun print_table () = print_table' compiled
+fun print_size_table () = print_table' (Int.toString o String.size) compiled
+fun print_translation_table () = print_table' (fn x => x) compiled
 
 
 fun skip_line nil = nil

@@ -162,6 +162,12 @@ struct
       | shrink f = f
 
 
+    fun remove_is (U.EApp (e1, e2)) = U.EApp (remove_is e1, remove_is e2)
+      | remove_is (U.EFunc U.VI) =
+        (* i => ``skk *)
+        U.EApp (U.EApp (U.EFunc U.VS, U.EFunc U.VK), U.EFunc U.VK)
+      | remove_is e = e
+
     end
 
     structure Ctx = StringDict
