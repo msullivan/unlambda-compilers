@@ -12,7 +12,7 @@ signature UNLAMBDA_REPR =
     val run : F -> unit
   end
 
-structure UnlambdaCallccRepr : UNLAMBDA_REPR =
+structure UnlambdaDelayRepr : UNLAMBDA_REPR =
 struct
     structure CC = Cont
 
@@ -148,11 +148,10 @@ in
 
     fun compile impl e = "let open " ^ impl ^ " in run (" ^ compile' e  ^ ") end;\n"
 
-    val compile_callcc = compile "UnlambdaCallccRepr"
+    val compile_delay = compile "UnlambdaDelayRepr"
     val compile_cps = compile "UnlambdaCpsRepr"
 end
 end
 
-
-structure UnlambdaCallcc = UnlambdaSelfifier(UnlambdaCallccRepr)
+structure UnlambdaDelay = UnlambdaSelfifier(UnlambdaDelayRepr)
 structure UnlambdaCps = UnlambdaSelfifier(UnlambdaCpsRepr)

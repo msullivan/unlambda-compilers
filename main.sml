@@ -12,7 +12,7 @@ struct
   val lambda_cps_only = i2 o Unlambdaify.eval_with_output o LowerUnlambda.cps_program o LowerUnlambda.expand_unlambda o Unlambda.load
   val micro_unlambda = i2 o UnlambdaInterp.eval_with_output o Unlambda.load o UnlambdaToMicroUnlambda.translate
 
-  val sml_callcc = i2 o UnlambdaCallcc.eval_with_output o Unlambda.load
+  val sml_delay = i2 o UnlambdaDelay.eval_with_output o Unlambda.load
   val sml_cps = i2 o UnlambdaCps.eval_with_output o Unlambda.load
 
   val default = unlambda_interp
@@ -26,7 +26,7 @@ struct
         | "--lambda-delay"::s => (lambda_delay, s)
         | "--lambda-cps-only"::s => (lambda_cps_only, s)
         | "--micro-unlambda"::s => (lambda_delay, s)
-        | "--sml-callcc"::s => (sml_callcc, s)
+        | "--sml-delay"::s => (sml_delay, s)
         | "--sml-cps"::s => (sml_cps, s)
 
         | s => (default, s)
