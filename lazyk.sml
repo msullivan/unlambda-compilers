@@ -51,14 +51,17 @@ struct
   withtype comb = comb' T.susp
 
   infix $$
-  fun f $$ g = % (fn () =>
-      let val (Func f') = T.force f
-      in T.force (f' g) end
+  fun f $$ g = % (
+          fn () =>
+             case T.force f of
+                 Func f' => T.force (f' g)
+               | _ => raise Fail "Num on LHS of app"
+      )
+  fun getNum f = (
+      case T.force f of
+          Num n => n
+        | _ => raise Fail "Func when Num expected"
   )
-  fun getNum f =
-      let val z = T.force f
-          val (Num n) = z
-      in n end
 
   (* Implementation of the combinators *)
   val I : comb = % (fn () => Func (fn x => x))
