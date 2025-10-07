@@ -179,15 +179,20 @@ struct
 
     datatype result = RFun of result -> result
                     | RDelay
-    fun unRFun (RFun f) = f
-      | unRFun RDelay = fn z => z
+    fun unRFun (RFun f) z = f z
+      | unRFun RDelay z = z
+
+    fun apply v1 e2t =
+        (case v1 of
+             RFun f1 => f1 (e2t ())
+           | RDelay => RFun (fn r => unRFun (e2t ()) r))
 
     fun eval_func out f =
         (case f of
              VI => RFun (fn x => x)
            | VK => RFun (fn x => RFun (fn _ => x))
            | VS => RFun (fn x => RFun (fn y => RFun (fn z =>
-                     unRFun (unRFun x z) (unRFun y z))))
+                     apply (unRFun x z) (fn () => unRFun y z))))
            | VV => RFun (fn _ => eval_func out VV)
            | VDot c => RFun (fn x => (out c; x))
            | VD => RDelay
@@ -196,7 +201,6 @@ struct
                          Cont.callcc (fn k => unRFun x (
                                                  RFun (fn y => Cont.throw k y))))
         )
-
 
     fun eval out env e =
         (case e of

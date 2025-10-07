@@ -78,6 +78,13 @@ struct
           "` ` `dd `.Bi `.Ai",
           "BA"
         ),
+        (* This one I screwed up! ```si.Ad -> ` `id `.Ad -> `d`.Ad -> don't print *)
+        (* s needs to potentially delay *)
+        (
+          "d4",
+          "```si.Ad",
+          ""
+        ),
         (
           "c1",
           "````" ^ ite ^ "i.T.Fi",

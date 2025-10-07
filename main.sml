@@ -3,7 +3,7 @@ struct
 
   fun i2 f (x : char -> unit) = ignore (f x)
 
-  (* LOL! there is a bug in basic_unlambda but not in delay!! *)
+  (* LOL! there was a bug in unlambda_interp and lambda_interp but not in the compiler ones!! *)
   val unlambda_interp = i2 o UnlambdaInterp.eval_with_output o Unlambda.load
   val lambda_interp = i2 o Unlambdaify.eval_with_output o Unlambdaify.load
 
