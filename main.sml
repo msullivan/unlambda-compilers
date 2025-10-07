@@ -1,0 +1,47 @@
+structure Main =
+struct
+
+  fun i2 f (x : char -> unit) = ignore (f x)
+
+  (* LOL! there is a bug in basic_unlambda but not in delay!! *)
+  val unlambda_interp = i2 o UnlambdaInterp.eval_with_output o Unlambda.load
+  val lambda_interp = i2 o Unlambdaify.eval_with_output o Unlambdaify.load
+
+  val lambda_cps = i2 o Unlambdaify.eval_with_output o LowerUnlambda.cps_program o LowerUnlambda.delay_program o LowerUnlambda.expand_unlambda o Unlambda.load
+  val lambda_delay = i2 o Unlambdaify.eval_with_output o LowerUnlambda.delay_program o LowerUnlambda.expand_unlambda o Unlambda.load
+  val lambda_cps_only = i2 o Unlambdaify.eval_with_output o LowerUnlambda.cps_program o LowerUnlambda.expand_unlambda o Unlambda.load
+  val micro_unlambda = i2 o UnlambdaInterp.eval_with_output o Unlambda.load o UnlambdaToMicroUnlambda.translate
+
+  val sml_callcc = i2 o UnlambdaCallcc.eval_with_output o Unlambda.load
+  val sml_cps = i2 o UnlambdaCps.eval_with_output o Unlambda.load
+
+  val default = unlambda_interp
+
+  fun getMethod args = (
+      case args of
+          "--interp"::s => (unlambda_interp, s)
+        | "--interp-unlambda"::s => (unlambda_interp, s)
+        | "--interp-lambda"::s => (lambda_interp, s)
+        | "--lambda-cps"::s => (lambda_cps, s)
+        | "--lambda-delay"::s => (lambda_delay, s)
+        | "--lambda-cps-only"::s => (lambda_cps_only, s)
+        | "--micro-unlambda"::s => (lambda_delay, s)
+        | "--sml-callcc"::s => (sml_callcc, s)
+        | "--sml-cps"::s => (sml_cps, s)
+
+        | s => (default, s)
+
+  )
+
+  fun parse args =
+      let val (func, rest) = getMethod args in
+          case rest of [s] => (func, s)
+                     | _ => raise Fail "no file specified"
+      end
+
+  fun main args =
+      let val (func, file) = parse args
+          val contents = Util.readFile file
+      in func contents Output.putc end
+
+end

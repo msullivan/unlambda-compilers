@@ -139,11 +139,7 @@ struct
         | (c, gunk) => raise Fail ("parse error - trailing gunk: '" ^ implode gunk ^ "'")
 
 
-  fun parseFile name =
-      let val f = TextIO.openIn name
-          val s = TextIO.inputAll f
-          val _ = TextIO.closeIn f
-      in parseExp s end
+  fun parseFile name = parseExp (Util.readFile name)
 
   fun runFile s =
       let val c = convExp (parseFile s)

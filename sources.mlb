@@ -1,0 +1,21 @@
+    $(SML_LIB)/basis/basis.mlb
+    $(SML_LIB)/basis/sml-nj.mlb
+    $(SML_LIB)/smlnj-lib/Util/smlnj-lib.mlb
+    $(SML_LIB)/mlyacc-lib/mlyacc-lib.mlb
+
+    util.sml
+    cont.sig
+    cont_smlnj.sml
+    output.sml
+    unlambda.sml
+    unlambdaify.sml
+    unlambda_selfify.sml
+    lazyk.sml
+    lambda.grm.sig
+    lambda.lex.sml
+    lambda.grm.sml
+    lambda.sml
+    to_ml.sml
+    test.sml
+    main.sml
+    run.sml

@@ -25,6 +25,10 @@ struct
     datatype token = TApp | TK | TS | TI | TV | TC | TD |
              TDot of char | TLambda of char | TVar of char
 
+    fun skip_line nil = nil
+      | skip_line (#"\n"::s) = s
+      | skip_line (_::s) = skip_line s
+
     fun lex nil = nil
       | lex (#"`"::s) = TApp::(lex s)
       | lex (#"k"::s) = TK::(lex s)
@@ -40,6 +44,7 @@ struct
       | lex (#"$"::c::s) = (TVar c)::(lex s)
       | lex (#"\t"::s) = lex s
       | lex (#"\n"::s) = lex s
+      | lex (#"#"::s) = lex (skip_line s)
       | lex _ = raise LexError
 
     datatype function = datatype UnlambdaifySyntax.function
