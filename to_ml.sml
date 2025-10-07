@@ -14,7 +14,7 @@ signature UNLAMBDA_REPR =
 
 structure UnlambdaCallccRepr : UNLAMBDA_REPR =
 struct
-    structure CC = SMLofNJ.Cont
+    structure CC = Cont
 
     structure U = Unlambda
 

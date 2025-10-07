@@ -2,6 +2,8 @@ Group is
     $/smlnj-lib.cm
     $/basis.cm
     $/ml-yacc-lib.cm
+    cont.sig
+    cont_smlnj.sml
     unlambda.sml
     unlambda_selfify.sml
     unlambdaify.sml

@@ -188,8 +188,8 @@ struct
            | VD => RDelay
            | VC => RFun (
                       fn x =>
-                         SMLofNJ.Cont.callcc (fn k => unRFun x (
-                                                         RFun (fn y => SMLofNJ.Cont.throw k y))))
+                         Cont.callcc (fn k => unRFun x (
+                                                 RFun (fn y => Cont.throw k y))))
         )
 
 

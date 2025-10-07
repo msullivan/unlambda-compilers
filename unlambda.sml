@@ -67,7 +67,7 @@ end
 structure UnlambdaInterp =
 struct
     structure U = Unlambda
-    structure CC = SMLofNJ.Cont
+    structure CC = Cont
 
 
     datatype expr = EApp of (expr * expr) | EFunc of value
