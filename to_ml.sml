@@ -146,7 +146,7 @@ in
     fun compile' (U.EApp (x, y)) = "ap (" ^ compile' x ^ ", " ^ compile' y ^ ")"
       | compile' (U.EFunc f) = "ul_" ^ compile_func f
 
-    fun compile impl e = "let open " ^ impl ^ " in " ^ compile' e  ^ " end\n"
+    fun compile impl e = "let open " ^ impl ^ " in run (" ^ compile' e  ^ ") end;\n"
 
     val compile_callcc = compile "UnlambdaCallccRepr"
     val compile_cps = compile "UnlambdaCpsRepr"
