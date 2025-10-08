@@ -88,24 +88,30 @@ struct
             val v1 = eval out e1
         in
             case v1 of VD => (VPromise e2)
-                     | _ => (apply out (v1, eval out e2))
+                     | _ => (apply out v1 (eval out e2))
         end
       | eval _ (EFunc f) = f
-    and apply _ (VK, x) = VK1 x
-      | apply _ (VK1 x, y) = x
-      | apply _ (VS, x) = VS1 x
-      | apply _ (VS1 x, y) = VS2 (x, y)
-      | apply out (VS2 (x, y), z) =
-        eval out (EApp (EFunc (apply out (x, z)), EApp (EFunc y, EFunc z)))
+    and apply _ VK x = VK1 x
+      | apply _ (VK1 x) y = x
+      | apply _ VS x = VS1 x
+      | apply _ (VS1 x) y = VS2 (x, y)
+      | apply out (VS2 (x, y)) z =
+        (* Key optimization here: we could *always* construct a full application
+         * and hand it back to eval, but that winds up slowing the whole thing down
+         * by about 2x. *)
+        (case apply out x z of
+             f as VD => eval out (EApp (EFunc f, EApp (EFunc y, EFunc z)))
+           | f => apply out f (apply out y z)
+        )
 
-      | apply _ (VI, x) = x
-      | apply _ (VV, _) = VV
-      | apply out (VDot c, x) = (out c; x)
-      | apply out (VC, x) =
-        CC.callcc (fn cont => apply out (x, VCont cont))
-      | apply _ (VCont cont, x) = CC.throw cont x
-      | apply _ (VD, x) = VPromise (EFunc x)
-      | apply out (VPromise eg, h) = (apply out (eval out eg, h))
+      | apply _ VI x = x
+      | apply _ VV _ = VV
+      | apply out (VDot c) x = (out c; x)
+      | apply out VC x =
+        CC.callcc (fn cont => apply out x (VCont cont))
+      | apply _ (VCont cont) x = CC.throw cont x
+      | apply _ VD x = VPromise (EFunc x)
+      | apply out (VPromise eg) h = (apply out (eval out eg) h)
 
 
     val eval' = eval
