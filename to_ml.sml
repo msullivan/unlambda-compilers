@@ -1,14 +1,17 @@
 signature UNLAMBDA_REPR =
   sig
+    type V
     type F
+    val func : V -> F
     val ap : F * F -> F
-    val ul_I : F
-    val ul_K : F
-    val ul_S : F
-    val ul_V : F
-    val ul_Dot : (char -> unit) -> char -> F
-    val ul_C : F
-    val ul_D : F
+    val ul_I : V
+    val ul_K : V
+    val ul_S : V
+    val ul_V : V
+    val ul_Dot : (char -> unit) -> char -> V
+    val ul_C : V
+    val ul_D : V
+
     val run : F -> unit
   end
 
@@ -19,6 +22,10 @@ struct
     structure U = Unlambda
 
     datatype F = F of unit -> F -> F
+
+    type V = F
+    fun func x = x
+
     fun unF (F x) = x
     fun ap (x, y) = F (fn () => unF ((unF x) () y) ())
     infix $$
@@ -59,6 +66,10 @@ struct
     (* |A -> B| = (|A| * |B| cont) cont *)
     (* |unit -> A| = (unit * |A| cont) cont, at which point we drop the unit *)
     datatype F = F of (F * F cont) cont cont cont
+
+    type V = F
+    fun func x = x
+
     fun unF (F x) = x
     fun ap (F x, y) = F (
             bind x (
@@ -121,7 +132,7 @@ in
          | U.VC => ul_C
          | U.VD => ul_D)
     fun selfify out (U.EApp (x, y)) = ap (selfify out x, selfify out y)
-      | selfify out (U.EFunc f) = selfify_value out f
+      | selfify out (U.EFunc f) = func (selfify_value out f)
 
     fun eval_with_output c out = run (selfify out c)
     fun eval c = eval_with_output c (Output.int_output Output.putc)
@@ -144,7 +155,7 @@ in
          | U.VC => "C"
          | U.VD => "D")
     fun compile' (U.EApp (x, y)) = "ap (" ^ compile' x ^ ", " ^ compile' y ^ ")"
-      | compile' (U.EFunc f) = "ul_" ^ compile_func f
+      | compile' (U.EFunc f) = "func (" ^ "ul_" ^ compile_func f ^ ")"
 
     fun compile impl e = "let open " ^ impl ^ " in run (" ^ compile' e  ^ ") end;\n"
 
