@@ -97,6 +97,7 @@ struct
       | apply _ (VS1 x, y) = VS2 (x, y)
       | apply out (VS2 (x, y), z) =
         eval out (EApp (EFunc (apply out (x, z)), EApp (EFunc y, EFunc z)))
+
       | apply _ (VI, x) = x
       | apply _ (VV, _) = VV
       | apply out (VDot c, x) = (out c; x)

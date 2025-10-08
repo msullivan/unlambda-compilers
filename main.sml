@@ -14,6 +14,7 @@ struct
 
   val sml_delay = i2 o UnlambdaDelay.eval_with_output o Unlambda.load
   val sml_cps = i2 o UnlambdaCps.eval_with_output o Unlambda.load
+  val sml_case = i2 o UnlambdaCase.eval_with_output o Unlambda.load
 
   val default = unlambda_interp
 
@@ -28,6 +29,7 @@ struct
         | "--micro-unlambda"::s => (lambda_delay, s)
         | "--sml-delay"::s => (sml_delay, s)
         | "--sml-cps"::s => (sml_cps, s)
+        | "--sml-case"::s => (sml_case, s)
 
         | s => (default, s)
 

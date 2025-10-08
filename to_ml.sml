@@ -15,6 +15,47 @@ signature UNLAMBDA_REPR =
     val run : F -> unit
   end
 
+structure UnlambdaCaseRepr : UNLAMBDA_REPR =
+struct
+    structure CC = Cont
+
+    structure U = Unlambda
+
+    datatype V = F of V -> V
+               | Delay
+    type F = unit -> V
+
+    fun unF (F f) z = f z
+      | unF Delay z = z
+
+    fun apv v1 e2 =
+        (case v1 of
+             F f1 => f1 (e2 ())
+           | Delay => F (fn v => unF (e2 ()) v))
+
+    fun func v () = v
+    fun ap (e1, e2) () = apv (e1 ()) e2
+
+    infix $$
+    val (op $$) = ap
+
+    (* Direct implementations of unlambda stuff *)
+    val ul_I = F (fn x => x)
+    val ul_K = F (fn x => F (fn _ => x))
+    (* can optimize two of the applications; well one at least. *)
+    val ul_S = F (fn x => F (fn y => F (fn z => apv (unF x z) (fn () => unF y z))))
+    fun ul_V' _ = F (ul_V')
+    val ul_V = F (ul_V')
+    fun ul_Dot out c = F (fn x => (out c; x))
+    val ul_C = F (
+            fn x =>
+               CC.callcc (fn k => unF x (F (fn y => CC.throw k y))))
+    val ul_D = Delay
+
+    fun run e = ignore (e ())
+end
+
+
 structure UnlambdaDelayRepr : UNLAMBDA_REPR =
 struct
     structure CC = Cont
@@ -161,8 +202,10 @@ in
 
     val compile_delay = compile "UnlambdaDelayRepr"
     val compile_cps = compile "UnlambdaCpsRepr"
+    val compile_case = compile "UnlambdaCaseRepr"
 end
 end
 
 structure UnlambdaDelay = UnlambdaSelfifier(UnlambdaDelayRepr)
 structure UnlambdaCps = UnlambdaSelfifier(UnlambdaCpsRepr)
+structure UnlambdaCase = UnlambdaSelfifier(UnlambdaCaseRepr)
