@@ -29,6 +29,9 @@ struct
         L.EApp (expand_unlambda e1, expand_unlambda e2)
       | expand_unlambda (U.EFunc v) = expand_unlambda_value v
 
+    (* HACK: capital letters are placeholders not variables *)
+    fun is_placeholder x = x >= "A" andalso x < "["
+
     (* val unit = EFunc VI *)
     val unit = `(x', %x')
 
@@ -81,15 +84,12 @@ struct
     in
 
     fun delayc (EVar k) = EVar k
-      | delayc (EApp (e1, e2)) =
-        let_
-            dx
-            (`(u_, delayc e2))
-            (
-              (delayc e1)
-                  $$ `(x, %x $$ (%dx $$ unit))
-                  $$ `(u_, inl (`(y, unF (%dx $$ unit) (%y))))
-            )
+      (* if the RHS is a variable, then delay means nothing *)
+      | delayc (EApp (e1 as EVar _, e2 as EVar x)) =
+        if is_placeholder x then eapp e1 e2
+        else unF (delayc e1) e2
+
+      | delayc (EApp (e1, e2)) = eapp e1 e2
 
 
       | delayc (ELambda (x, e)) =
@@ -105,12 +105,22 @@ struct
 
       | delayc e = raise Fail ("unexpanded combinator " ^ L.unparse e)
 
+    and eapp e1 e2 =
+        let_
+            dx
+            (`(u_, delayc e2))
+            (
+              (delayc e1)
+                  $$ `(x, %x $$ (%dx $$ unit))
+                  $$ `(u_, inl (`(y, unF (%dx $$ unit) (%y))))
+            )
+
     fun delayc_program e = delayc e
     end
 
     (* XXX: functorize or something -- need to test both!! *)
-    val delay = delayc
-    val delay_program = delayc_program
+    (* val delay = delayc *)
+    (* val delay_program = delayc_program *)
 
 
     local
@@ -145,8 +155,7 @@ struct
             fun cps e =
                 (case e of
                      EVar x =>
-                     (* HACK: capital letters are placeholders not variables *)
-                     if x >= "A" andalso x < "[" then (%x)
+                     if is_placeholder x then (%x)
                      else return (%x)
                    | ELambda (x, e) => return (`(x, cps e))
                    (* Inline the binds *)
