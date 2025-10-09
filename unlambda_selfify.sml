@@ -64,6 +64,55 @@ struct
     fun delay_program e = delay e $$ unit
     end
 
+    val (delayt, delayt_program) = (delay, delay_program)
+
+    (* CASE BASED! *)
+    local
+        open L
+        val (dx, dy, l, r) = ("d", "e", "l", "r")
+
+        fun inl e = `(l, `(r, %l $$ e))
+        fun inr e = `(l, `(r, %r $$ e))
+        fun let_ x v body = `(x, body) $$ v
+        (* fun go e = (EFunc VK) $$ (e $$ unit) *)
+
+        fun unF e v = e $$ `(dx, %dx $$ v) $$ `(u_, v)
+
+    in
+
+    fun delayc (EVar k) = EVar k
+      | delayc (EApp (e1, e2)) =
+        let_
+            dx
+            (`(u_, delayc e2))
+            (
+              (delayc e1)
+                  $$ `(x, %x $$ (%dx $$ unit))
+                  $$ `(u_, inl (`(y, unF (%dx $$ unit) (%y))))
+            )
+
+
+      | delayc (ELambda (x, e)) =
+        inl (`(x, delayc e))
+
+      | delayc (EFunc VD) = inr unit
+
+      (* XXX: is this needed? oh, probably, since we need to delayc the cont *)
+      | delayc (EFunc VC) =
+        inl (`(x, L.EFunc L.VC $$ `(y, unF (%x) (inl (%y)))))
+
+      | delayc (e as (EFunc (VDot _))) = inl e
+
+      | delayc e = raise Fail ("unexpanded combinator " ^ L.unparse e)
+
+    fun delayc_program e = delayc e
+    end
+
+    (* XXX: functorize or something -- need to test both!! *)
+    val delay = delayc
+    val delay_program = delayc_program
+
+
     local
         open L
         val S = EFunc VS
@@ -192,6 +241,8 @@ local
     val cps_prefix_app = make_app_prefix_str LowerUnlambda.cps_convert
     val vi_cps = convert (LowerUnlambda.cps_convert LowerUnlambda.unit)
 
+    (* when using delayt, the result is usually "Inl f", which can tolerate
+     * the extra `i` we apply to it via vi_cps *)
     (* val (prefix, suffix) = ("`", "i") *)
     val (prefix, suffix) = ("`" ^ cps_prefix_app, vi_cps ^ "i")
 

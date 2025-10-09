@@ -64,6 +64,16 @@ struct
 
     val tests = [
         (
+          "dot",
+          "`.Ai",
+          "A"
+        ),
+        (
+          "kdot",
+          "`k`.Ai",
+          "A"
+        ),
+        (
           "d1",
           "` ` d `.Bi `.Ai",
           "AB"
@@ -152,6 +162,14 @@ struct
 
     val impls = [
         ("basic", i2 o UnlambdaInterp.eval_with_output o Unlambda.load),
+        (
+          "lambda delayc only",
+          i2 o Unlambdaify.eval_with_output o LowerUnlambda.delayc_program o LowerUnlambda.expand_unlambda o Unlambda.load
+        ),
+        (
+          "lambda delayt only",
+          i2 o Unlambdaify.eval_with_output o LowerUnlambda.delayt_program o LowerUnlambda.expand_unlambda o Unlambda.load
+        ),
         (
           "lambda",
           i2 o Unlambdaify.eval_with_output o LowerUnlambda.cps_program o LowerUnlambda.delay_program o LowerUnlambda.expand_unlambda o Unlambda.load
