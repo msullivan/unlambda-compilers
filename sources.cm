@@ -11,6 +11,7 @@ Group is
     lambda.lex
     lambda.grm
     lambda.sml
+    ml_repr.sml
     to_ml.sml
     test.sml
     output.sml

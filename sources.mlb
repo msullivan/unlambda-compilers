@@ -15,6 +15,7 @@
     lambda.lex.sml
     lambda.grm.sml
     lambda.sml
+    ml_repr.sml
     to_ml.sml
     test.sml
     main.sml
