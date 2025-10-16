@@ -73,7 +73,14 @@ in
 
     (* todo: there is an optimization available *)
 
-    fun compile' (U.EApp (x, y)) =
+    fun compile' (U.EApp (U.EFunc U.VD, y)) =
+        "F (fn v => unF (" ^ compile' y ^ ") v)"
+      | compile' (U.EApp (U.EFunc fv, y)) =
+        "(ful_" ^ compile_func fv ^ ") (" ^ compile' y ^ ")"
+      | compile' (U.EApp (x, f as U.EFunc _)) =
+        "unF (" ^ compile' x ^ ") (" ^ compile' f ^ ")"
+
+      | compile' (U.EApp (x, y)) =
         "let val f = (fn () => " ^ compile' y ^ ") in " ^
         "(case " ^ compile' x ^ " of " ^
         "F g => g (f ()) | Delay => F (fn v => unF (f ()) v)) end"

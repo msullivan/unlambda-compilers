@@ -38,17 +38,27 @@ struct
     infix $$
     val (op $$) = ap
 
+    (* TODO: do some measurement between S-applications and non-S applications *)
+
     (* Direct implementations of unlambda stuff *)
-    val ul_I = F (fn x => x)
-    val ul_K = F (fn x => F (fn _ => x))
+    (* We expose non F-wrapped versions for codegen-side optimization *)
+    val ful_I = (fn x => x)
+    val ful_K = (fn x => F (fn _ => x))
     (* can optimize two of the applications; well one at least. *)
-    val ul_S = F (fn x => F (fn y => F (fn z => apv (unF x z) (fn () => unF y z))))
-    fun ul_V' _ = F (ul_V')
-    val ul_V = F (ul_V')
-    fun ul_Dot out c = F (fn x => (out c; x))
-    val ul_C = F (
+    val ful_S = (fn x => F (fn y => F (fn z => apv (unF x z) (fn () => unF y z))))
+
+    fun ful_V _ = F (ful_V)
+    val ul_V = F ful_V
+    fun ful_Dot out c = (fn x => (out c; x))
+    val ful_C = (
             fn x =>
                CC.callcc (fn k => unF x (F (fn y => CC.throw k y))))
+
+    val ul_I = F ful_I
+    val ul_K = F ful_K
+    val ul_S = F ful_S
+    val ul_C = F ful_C
+    fun ul_Dot out c = F (ful_Dot out c)
     val ul_D = Delay
 
     fun run e = ignore (e ())
