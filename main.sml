@@ -41,9 +41,16 @@ struct
                      | _ => raise Fail "no file specified"
       end
 
-  fun main args =
+  fun main_inner (name, args) =
       let val (func, file) = parse args
           val contents = Util.readFile file
-      in func contents Output.putc end
+          val _ = func contents Output.putc
+      in OS.Process.success end
+
+  fun main (name, args) =
+      main_inner (name, args)
+      handle e => (print ("Exception " ^ exnMessage e ^ "\n");
+                   OS.Process.failure)
+
 
 end

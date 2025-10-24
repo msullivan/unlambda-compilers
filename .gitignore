@@ -1,4 +1,6 @@
 unlambda
+unlambda-smlnj
+unlambda.heap.x86-linux
 lambda.grm.sig
 lambda.grm.sml
 lambda.lex.sml

@@ -19,4 +19,4 @@
     to_ml.sml
     test.sml
     main.sml
-    run.sml
+    mlton-run.sml
