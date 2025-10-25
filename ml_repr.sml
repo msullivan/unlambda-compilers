@@ -26,6 +26,13 @@ struct
 
     fun unF (F f) z = f z
       | unF Delay z = z
+    (* This *destroys* mlton?? takes forever *)
+    (* fun unF (F f) = f *)
+    (*   | unF Delay = fn z => z *)
+
+    (* fun unF' (F f) z = f z *)
+    fun unF' (F f) = f
+      | unF' Delay = raise Fail "unexpected delay"
 
     fun apv v1 e2 =
         (case v1 of

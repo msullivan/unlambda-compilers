@@ -71,19 +71,28 @@ in
     (*          F f1 => f1 (e2 ()) *)
     (*        | Delay => F (fn v => unF (e2 ()) v)) *)
 
-    (* todo: there is an optimization available *)
+    (* obviously doing it like this is very n^2 but that's probably OK *)
+    fun has_d (U.EFunc U.VD) = true
+      | has_d (U.EFunc _) = false
+      | has_d (U.EApp (e1, e2)) = has_d e1 orelse has_d e2
+
+
+
 
     fun compile' (U.EApp (U.EFunc U.VD, y)) =
         "F (fn v => unF (" ^ compile' y ^ ") v)"
       | compile' (U.EApp (U.EFunc fv, y)) =
         "(ful_" ^ compile_func fv ^ ") (" ^ compile' y ^ ")"
       | compile' (U.EApp (x, f as U.EFunc _)) =
-        "unF (" ^ compile' x ^ ") (" ^ compile' f ^ ")"
+        "unF' (" ^ compile' x ^ ") (" ^ compile' f ^ ")"
 
       | compile' (U.EApp (x, y)) =
-        "let val f = (fn () => " ^ compile' y ^ ") in " ^
-        "(case " ^ compile' x ^ " of " ^
-        "F g => g (f ()) | Delay => F (fn v => unF (f ()) v)) end"
+        if not (has_d x) then
+            "unF' (" ^ compile' x ^ ") (" ^ compile' y ^ ")"
+        else
+            "let val f = (fn () => " ^ compile' y ^ ") in " ^
+            "(case " ^ compile' x ^ " of " ^
+            "F g => g (f ()) | Delay => F (fn v => unF (f ()) v)) end"
       | compile' (U.EFunc f) = "ul_" ^ compile_func f
 
     fun compile impl e = "let open " ^ impl ^ " in (" ^ compile' e  ^ ") end;\n"
