@@ -84,11 +84,12 @@ in
       | compile' (U.EApp (U.EFunc fv, y)) =
         "(ful_" ^ compile_func fv ^ ") (" ^ compile' y ^ ")"
       | compile' (U.EApp (x, f as U.EFunc _)) =
-        "unF' (" ^ compile' x ^ ") (" ^ compile' f ^ ")"
+        "unF (" ^ compile' x ^ ") (" ^ compile' f ^ ")"
 
       | compile' (U.EApp (x, y)) =
         if not (has_d x) then
-            "unF' (" ^ compile' x ^ ") (" ^ compile' y ^ ")"
+            "let val (F g) = " ^ compile' x ^ " in g (" ^ compile' y ^ ") end"
+            (* "unF' (" ^ compile' x ^ ") (" ^ compile' y ^ ")" *)
         else
             "let val f = (fn () => " ^ compile' y ^ ") in " ^
             "(case " ^ compile' x ^ " of " ^
