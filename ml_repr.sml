@@ -34,6 +34,8 @@ struct
     fun unF' (F f) = f
       | unF' Delay = raise Fail "unexpected delay"
 
+    fun delay_thunk f = F (fn v => unF (f ()) v)
+
     fun apv v1 e2 =
         (case v1 of
              F f1 => f1 (e2 ())

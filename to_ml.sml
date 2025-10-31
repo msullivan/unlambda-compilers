@@ -94,6 +94,7 @@ in
             "let val f = (fn () => " ^ compile' y ^ ") in " ^
             "(case " ^ compile' x ^ " of " ^
             "F g => g (f ()) | Delay => F (fn v => unF (f ()) v)) end"
+            (* "F g => g (f ()) | Delay => delay_thunk f) end" *)
       | compile' (U.EFunc f) = "ul_" ^ compile_func f
 
     fun compile impl e = "let open " ^ impl ^ " in (" ^ compile' e  ^ ") end;\n"
