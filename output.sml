@@ -38,4 +38,11 @@ struct
             val (get, putc) = captured_output max_opt
         in (get, int_output putc) end
 
+    fun getc () = TextIO.input1 TextIO.stdIn
+
+    fun make_io (getc : unit -> char option) =
+        let val cur = ref NONE
+            fun pipe () = (cur := getc (); isSome (!cur))
+        in (pipe, cur) end
+
 end

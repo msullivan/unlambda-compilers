@@ -23,7 +23,9 @@ struct
     type ident = string
 
     datatype token = TApp | TK | TS | TI | TV | TC | TD |
-             TDot of char | TLambda of char | TVar of char
+                     TE | TAt | TPipe |
+                     TDot of char | TQuest of char |
+                     TLambda of char | TVar of char
 
     fun skip_line nil = nil
       | skip_line (#"\n"::s) = s
@@ -37,7 +39,11 @@ struct
       | lex (#"v"::s) = TV::(lex s)
       | lex (#"c"::s) = TC::(lex s)
       | lex (#"d"::s) = TD::(lex s)
+      | lex (#"e"::s) = TE::(lex s)
+      | lex (#"@"::s) = TAt::(lex s)
+      | lex (#"|"::s) = TPipe::(lex s)
       | lex (#"."::c::s) = (TDot c)::(lex s)
+      | lex (#"?"::c::s) = (TQuest c)::(lex s)
       | lex (#"r"::s) = (TDot #"\n")::(lex s)
       | lex (#" "::s) = lex s
       | lex (#"^"::c::s) = (TLambda c)::(lex s)
@@ -74,7 +80,11 @@ struct
               | parse' (TV::l) = (EFunc VV, l)
               | parse' (TC::l) = (EFunc VC, l)
               | parse' (TD::l) = (EFunc VD, l)
+              | parse' (TE::l) = (EFunc VE, l)
+              | parse' (TAt::l) = (EFunc VAt, l)
+              | parse' (TPipe::l) = (EFunc VPipe, l)
               | parse' ((TDot c)::l) = (EFunc (VDot c), l)
+              | parse' ((TQuest c)::l) = (EFunc (VQuest c), l)
               | parse' ((TVar c)::l) = (EVar (str c), l)
             val (exp, rest) = parse' l
         in
@@ -88,8 +98,10 @@ struct
       | unparse (EFunc f) =
         (case f
           of VK => "k" | VS => "s" | VI => "i" | VV => "v" | VC => "c"
-           | VD => "d" | VDot #"\n" => "r"
+           | VD => "d" | VE => "e" | VAt => "@" | VPipe => "|"
+           | VDot #"\n" => "r"
            | VDot c => (implode [#".", c])
+           | VQuest c => (implode [#"?", c])
         )
 
     local
@@ -179,6 +191,7 @@ struct
 
     datatype result = RFun of result -> result
                     | RDelay
+    exception Done of result
     fun unRFun (RFun f) z = f z
       | unRFun RDelay z = z
 
@@ -187,19 +200,31 @@ struct
              RFun f1 => f1 (e2t ())
            | RDelay => RFun (fn r => unRFun (e2t ()) r))
 
-    fun eval_func out f =
+    fun eval_func (out as ((pipef, cur), outp)) f =
         (case f of
              VI => RFun (fn x => x)
            | VK => RFun (fn x => RFun (fn _ => x))
            | VS => RFun (fn x => RFun (fn y => RFun (fn z =>
                      apply (unRFun x z) (fn () => unRFun y z))))
            | VV => RFun (fn _ => eval_func out VV)
-           | VDot c => RFun (fn x => (out c; x))
+           | VDot c => RFun (fn x => (outp c; x))
            | VD => RDelay
            | VC => RFun (
                       fn x =>
                          Cont.callcc (fn k => unRFun x (
                                                  RFun (fn y => Cont.throw k y))))
+           | VE => RFun (fn x => raise Done x)
+           | VAt => RFun (fn x => unRFun x (eval_func out ((if pipef () then VI else VV))))
+           | VPipe =>
+             RFun (
+                 fn x => unRFun x (
+                            eval_func out (case !cur of SOME x => VDot x | NONE => VV)
+                        )
+             )
+           | VQuest c =>
+             RFun (
+                 fn x => unRFun x (eval_func out (if !cur = SOME c then VI else VV))
+             )
         )
 
     fun eval out env e =
@@ -222,9 +247,12 @@ struct
     val stransform = (U.unparse o transform)
     (* val exec = (UnlambdaInterp.eval o transform) *)
 
-    val eval' = eval
-    fun eval_with_output e out = eval' out Ctx.empty e
+    fun eval' out ctx e = eval out ctx e handle Done v => v
+    fun eval_with_io e (out : char -> unit) (inp : unit -> char option)
+        = eval' (Output.make_io inp, out) Ctx.empty e
+    fun eval_with_output e (out : char -> unit) = eval_with_io e out Output.getc
     fun eval e = eval_with_output e (Output.int_output Output.putc)
+
 end
 
 structure Unlambdaify = UnlambdaifyFn(val strict = true)

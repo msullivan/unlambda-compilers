@@ -1,10 +1,10 @@
 structure Unlambda =
 struct
-    exception LexError
+    exception LexError of string
     exception ParseError of string
 
-    datatype token = TApp | TK | TS | TI | TV | TC | TD |
-             TDot of char
+    datatype token = TApp | TK | TS | TI | TV | TC | TD | TE | TAt | TPipe |
+             TDot of char | TQuest of char
 
     fun skip_line nil = nil
       | skip_line (#"\n"::s) = s
@@ -18,23 +18,29 @@ struct
       | lex (#"v"::s) = TV::(lex s)
       | lex (#"c"::s) = TC::(lex s)
       | lex (#"d"::s) = TD::(lex s)
+      | lex (#"e"::s) = TE::(lex s)
+      | lex (#"@"::s) = TAt::(lex s)
+      | lex (#"|"::s) = TPipe::(lex s)
       | lex (#"."::c::s) = (TDot c)::(lex s)
+      | lex (#"?"::c::s) = (TQuest c)::(lex s)
       | lex (#"r"::s) = (TDot #"\n")::(lex s)
       | lex (#" "::s) = lex s
       | lex (#"\t"::s) = lex s
       | lex (#"\n"::s) = lex s
       | lex (#"#"::s) = lex (skip_line s)
-      | lex (_::s) = raise LexError
+      | lex (c::s) = (print ("asdf: " ^ str c ^ "\n"); raise (LexError (str c)))
 
     datatype expr = EApp of (expr * expr) | EFunc of value
-         and value = VK | VS | VI | VV | VC | VD | VDot of char
+         and value = VK | VS | VI | VV | VC | VD | VE | VAt | VPipe | VDot of char | VQuest of char
 
     fun unparse (EApp (e1, e2)) = "`" ^ (unparse e1) ^ (unparse e2)
       | unparse (EFunc f) =
         (case f
           of VK => "k" | VS => "s" | VI => "i" | VV => "v" | VC => "c"
-           | VD => "d" | VDot #"\n" => "r"
-           | VDot c => (implode [#".", c])
+             | VD => "d" | VE => "e" | VAt => "@" | VPipe => "|"
+             | VDot #"\n" => "r"
+             | VQuest c => (implode [#"?", c])
+             | VDot c => (implode [#".", c])
         )
 
     fun parse l =
@@ -53,7 +59,11 @@ struct
               | parse' (TV::l) = (EFunc VV, l)
               | parse' (TC::l) = (EFunc VC, l)
               | parse' (TD::l) = (EFunc VD, l)
+              | parse' (TE::l) = (EFunc VE, l)
+              | parse' (TAt::l) = (EFunc VAt, l)
+              | parse' (TPipe::l) = (EFunc VPipe, l)
               | parse' ((TDot c)::l) = (EFunc (VDot c), l)
+              | parse' ((TQuest c)::l) = (EFunc (VQuest c), l)
 
             val (exp, rest) = parse' l
         in
@@ -74,12 +84,16 @@ struct
          and value = VK | VK1 of value | VS | VS1 of value
                    | VS2 of (value * value) | VI | VV
                    | VC | VCont of (value CC.cont) | VD | VPromise of expr
-                   | VDot of char
+                   | VE | VAt | VPipe | VDot of char | VQuest of char
+
+    exception Done of value
 
     fun convert_value v = (
         case v of
             U.VK => VK | U.VS => VS | U.VI => VI | U.VV => VV
-          | U.VC => VC | U.VD => VD | U.VDot c => VDot c)
+            | U.VC => VC | U.VD => VD
+            | U.VE => VE | U.VAt => VAt | U.VPipe => VPipe
+            | U.VDot c => VDot c | U.VQuest c => VQuest c)
     fun convert (U.EApp (e1, e2)) = EApp (convert e1, convert e2)
       | convert (U.EFunc v) = EFunc (convert_value v)
 
@@ -96,6 +110,7 @@ struct
       | apply _ VS x = VS1 x
       | apply _ (VS1 x) y = VS2 (x, y)
       | apply out (VS2 (x, y)) z =
+        (* eval out (EApp (EApp (EFunc x, EFunc z), EApp (EFunc y, EFunc z))) *)
         (* Key optimization here: we could *always* construct a full application
          * and hand it back to eval, but that winds up slowing the whole thing down
          * by about 2x. *)
@@ -106,15 +121,27 @@ struct
 
       | apply _ VI x = x
       | apply _ VV _ = VV
-      | apply out (VDot c) x = (out c; x)
+      | apply (_, outp) (VDot c) x = (outp c; x)
       | apply out VC x =
         CC.callcc (fn cont => apply out x (VCont cont))
       | apply _ (VCont cont) x = CC.throw cont x
       | apply _ VD x = VPromise (EFunc x)
       | apply out (VPromise eg) h = (apply out (eval out eg) h)
 
+      | apply _ VE v = raise Done v
+      | apply (out as ((pipef, _), _)) VAt v =
+        apply out v (if pipef () then VI else VV)
+      | apply (out as ((_, cur), _)) VPipe v =
+        apply out v (
+            case !cur of SOME x => VDot x | NONE => VV
+        )
+      | apply (out as ((_, cur), _)) (VQuest c) v =
+        apply out v (if !cur = SOME c then VI else VV)
 
-    val eval' = eval
-    fun eval_with_output e (out : char -> unit) = eval' out (convert e)
+
+    fun eval' out e = eval out e handle Done v => v
+    fun eval_with_io e (out : char -> unit) (inp : unit -> char option)
+        = eval' (Output.make_io inp, out) (convert e)
+    fun eval_with_output e (out : char -> unit) = eval_with_io e out Output.getc
     fun eval e = eval_with_output e (Output.int_output Output.putc)
 end
