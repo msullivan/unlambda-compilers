@@ -2,13 +2,6 @@ structure Test =
 struct
     structure U = Unlambda
     structure UY = Unlambdaify
-    structure L = Lambda
-
-    fun mix ul l =
-        (UY.EApp (UY.load ul, L.load l))
-
-    val PR = "^n`r``$n.*i"
-    fun ntest s = (UnlambdaInterp.eval (UY.convert ((mix PR s))))
 
     fun run_captured' f e limit =
         let

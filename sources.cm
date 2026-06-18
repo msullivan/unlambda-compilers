@@ -1,16 +1,12 @@
 Group is
     $/smlnj-lib.cm
     $/basis.cm
-    $/ml-yacc-lib.cm
     cont.sig
     cont_smlnj.sml
     util.sml
     unlambda.sml
     unlambda_selfify.sml
     unlambdaify.sml
-    lambda.lex
-    lambda.grm
-    lambda.sml
     ml_repr.sml
     to_ml.sml
     test.sml

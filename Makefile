@@ -1,6 +1,6 @@
 all: unlambda-smlnj unlambda
 
-unlambda: *.sml *.sig *.grm *.lex unlambda.mlb Makefile
+unlambda: *.sml *.sig unlambda.mlb Makefile
 	mlton unlambda.mlb
 
 
@@ -19,7 +19,7 @@ endef
 export SMLNJ_RUN_SCRIPT
 
 
-unlambda.heap.$(PLATFORM): *.sml *.sig *.grm *.lex sources.cm Makefile
+unlambda.heap.$(PLATFORM): *.sml *.sig sources.cm Makefile
 	echo "$$SMLNJ_BUILD_SCRIPT" | sml
 
 unlambda-smlnj: unlambda.heap.$(PLATFORM)
