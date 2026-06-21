@@ -5,7 +5,8 @@ struct
 
     fun run_captured' f e limit =
         let
-            val (get, putc) = Output.captured_int_output limit
+            val (get, putc) = Output.captured_int_output ()
+            val putc = Output.capped_output putc limit
             val () = (ignore (f e putc) handle Output.Done => ())
         in get () end
     fun run_captured f e = run_captured' f e (SOME 10)

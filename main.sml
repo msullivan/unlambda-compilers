@@ -36,15 +36,22 @@ struct
   )
 
   fun parse args =
-      let val (func, rest) = getMethod args in
-          case rest of [s] => (func, s)
+      let val (func, rest) = getMethod args
+          val (cap, rest) = (
+              case rest of
+                  "--max-lines"::num::s => (SOME (valOf (Int.fromString num)), s)
+                | s => (NONE, s))
+      in
+
+          case rest of [s] => (func, cap, s)
                      | _ => raise Fail "no file specified"
       end
 
   fun main_inner (name, args) =
-      let val (func, file) = parse args
+      let val (func, cap, file) = parse args
           val contents = Util.readFile file
-          val _ = func contents Output.putc
+          val _ = ignore (func contents (Output.capped_output Output.putc cap))
+                  handle Output.Done => ()
       in OS.Process.success end
 
   fun main (name, args) =

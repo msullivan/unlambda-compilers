@@ -6,6 +6,19 @@ struct
     (* fun putc c = TextIO.output1 (TextIO.stdOut, c) *)
     fun puts f s = List.app f (explode s)
 
+    fun capped_output putc max_opt =
+        let
+            val lines = ref 0
+        in
+            fn c => (
+               putc c;
+               if c = #"\n" then lines := (!lines) + 1 else ();
+               (case max_opt of
+                    NONE => ()
+                  | SOME max => if (!lines) >= max then raise Done else ())
+            )
+        end
+
     fun int_output putc =
         let
             val cnt = ref 0
@@ -19,23 +32,19 @@ struct
                    putc c
         end
 
-    fun captured_output max_opt =
+    fun captured_output () =
         let
             val out = ref []
             val lines = ref 0
             fun get () = implode (rev (!out))
             fun putc c = (
-                out := c :: (!out);
-                if c = #"\n" then lines := (!lines) + 1 else ();
-                (case max_opt of
-                     NONE => ()
-                   | SOME max => if (!lines) >= max then raise Done else ())
+                out := c :: (!out)
             )
         in (get, putc) end
 
-    fun captured_int_output max_opt =
+    fun captured_int_output () =
         let
-            val (get, putc) = captured_output max_opt
+            val (get, putc) = captured_output ()
         in (get, int_output putc) end
 
     fun getc () = TextIO.input1 TextIO.stdIn
